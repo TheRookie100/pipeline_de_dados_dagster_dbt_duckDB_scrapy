@@ -1,0 +1,46 @@
+# models/economia/economia_schema.yml
+
+version: 2
+
+sources:
+  - name: economia_source
+    schema: main  # Schema no DuckDB
+    tables:
+      - name: economia_raw
+        description: "Tabela bruta de notícias de economia extraídas pelos crawlers."
+        columns:
+          - name: id
+            description: "Identificador único da notícia de economia."
+            data_tests:
+              - not_null
+              - unique
+          - name: titulo_noticia
+            description: "Título da notícia de economia."
+            data_tests:
+              - not_null
+          - name: time_ago
+            description: "Tempo decorrido desde a publicação da notícia."
+          - name: texto
+            description: "Conteúdo da notícia de economia."
+          - name: data_publicacao
+            description: "Data de publicação da notícia de economia."
+
+models:
+  - name: economia_transformed
+    description: "Modelo transformado para economia."
+    columns:
+      - name: id
+        description: "Identificador único da notícia."
+        data_tests:
+          - not_null
+          - unique
+      - name: titulo_noticia
+        description: "Título da notícia."
+        data_tests:
+          - not_null
+      - name: texto
+        description: "Conteúdo da notícia."
+      - name: data_publicacao
+        description: "Data de publicação da notícia."
+      - name: time_ago
+        description: "Tempo decorrido desde a publicação da notícia."

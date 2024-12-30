@@ -1,0 +1,42 @@
+# models/governo/governo_schema.yml
+
+version: 2
+
+sources:
+  - name: governo_source
+    schema: main  # Schema no DuckDB
+    tables:
+      - name: governo_raw
+        description: "Tabela bruta de notícias de governo extraídas pelos crawlers."
+        columns:
+          - name: id
+            description: "Identificador único da notícia de governo."
+            data_tests:
+              - not_null
+              - unique
+          - name: titulo_noticia
+            description: "Título da notícia de governo."
+            data_tests:
+              - not_null
+          - name: texto
+            description: "Conteúdo da notícia de governo."
+          - name: data_publicacao
+            description: "Data de publicação da notícia de governo."
+
+models:
+  - name: governo_transformed
+    description: "Modelo transformado para governo."
+    columns:
+      - name: id
+        description: "Identificador único da notícia."
+        data_tests:
+          - not_null
+          - unique
+      - name: titulo_noticia
+        description: "Título da notícia."
+        data_tests:
+          - not_null
+      - name: texto
+        description: "Conteúdo da notícia."
+      - name: data_publicacao
+        description: "Data de publicação da notícia."
