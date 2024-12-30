@@ -155,9 +155,13 @@ Automatizar Deployments: Configurar pipelines de CI/CD para automatizar a implan
 Caso você tenha mais perguntas ou precise de assistência adicional em qualquer uma das etapas, sinta-se à vontade para perguntar!
 
 
-Claro! Vamos detalhar cada uma das tecnologias envolvidas no seu projeto, entender suas funções individuais e como elas interagem para formar um pipeline eficiente de ETL (Extração, Transformação e Carga), data warehousing, ciência de dados, engenharia de dados e crawling. A seguir, apresento uma visão abrangente de Dagster, DBT, DuckDB, MongoDB e Scrapy, além de como elas se comunicam e contribuem para o seu projeto.
+Claro! Vamos detalhar cada uma das tecnologias envolvidas no seu projeto, entender suas funções individuais 
+e como elas interagem para formar um pipeline eficiente de ETL (Extração, Transformação e Carga), data warehousing, 
+ciência de dados, engenharia de dados e crawling. A seguir, apresento uma visão abrangente de Dagster, DBT, DuckDB, 
+MongoDB e Scrapy, além de como elas se comunicam e contribuem para o seu projeto.
 
 1. Visão Geral das Tecnologias
+
 1.1. Dagster
 Dagster é uma plataforma de orquestração de pipelines de dados. Ele permite que você defina, execute e monitore pipelines de dados complexos de forma modular e escalável.
 
@@ -166,14 +170,17 @@ Definição de Assets: Componentes individuais que representam partes do pipelin
 Orquestração: Coordena a execução dos assets em uma ordem específica.
 Monitoramento: Fornece visibilidade sobre a execução dos pipelines através do Dagit (interface web).
 Gerenciamento de Recursos: Facilita a integração com sistemas externos (bancos de dados, APIs, etc.) por meio de recursos configuráveis.
+
 1.2. DBT (Data Build Tool)
-DBT é uma ferramenta de transformação de dados que permite aos engenheiros de dados transformar dados brutos em modelos analíticos utilizando SQL. Ele se concentra na transformação de dados dentro do data warehouse.
+DBT é uma ferramenta de transformação de dados que permite aos engenheiros de dados transformar dados brutos em modelos analíticos 
+utilizando SQL. Ele se concentra na transformação de dados dentro do data warehouse.
 
 Principais Funcionalidades:
 Transformações SQL: Define modelos de dados usando SQL puro.
 Versionamento e Documentação: Integração com sistemas de controle de versão e geração automática de documentação.
 Testes de Dados: Validação de qualidade dos dados através de testes automatizados.
 Orquestração Simples: Embora DBT possa ser executado standalone, ele é frequentemente integrado com ferramentas de orquestração como Dagster para pipelines mais complexos.
+
 1.3. DuckDB
 DuckDB é um banco de dados analítico embutido, semelhante ao SQLite, mas otimizado para processamento de consultas analíticas rápidas em grandes volumes de dados.
 
@@ -181,6 +188,7 @@ Principais Funcionalidades:
 Banco de Dados Embutido: Não requer um servidor separado; funciona diretamente com arquivos locais.
 Performance Analítica: Otimizado para consultas rápidas e processamento eficiente de dados analíticos.
 Compatibilidade com SQL: Suporta a maioria das funcionalidades do SQL padrão.
+
 1.4. MongoDB
 MongoDB é um banco de dados NoSQL orientado a documentos que armazena dados em formato JSON-like (BSON), permitindo flexibilidade e escalabilidade.
 

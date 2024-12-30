@@ -1,32 +1,32 @@
-import os # Importar os
-import json # Importar json
-import pandas as pd # Importar pandas
-from datetime import datetime # Importar datetime do Python 
-from dagster import asset # Importar asset do Dagster
-from scrapy.crawler import CrawlerProcess # Importar CrawlerProcess do Scrapy
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider # Importar spiders 
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider # Importar spiders
-import duckdb # Importar DuckDB
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer # Importar SentimentIntensityAnalyzer
-from sklearn.model_selection import train_test_split # Importar função de divisão de dados
-from sklearn.ensemble import RandomForestClassifier # Importar modelos
-from sklearn.linear_model import LogisticRegression # Importar modelos
-from sklearn.svm import SVC # Importar modelos
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix # Importar métricas
-from filelock import FileLock # Importar FileLock para controle de concorrência
-import hashlib # Importar hashlib para gerar hash de strings
-import subprocess # Importar subprocess para executar comandos no terminal
+import os
+import json 
+import pandas as pd 
+from datetime import datetime 
+from dagster import asset 
+from scrapy.crawler import CrawlerProcess 
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider 
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider 
+import duckdb 
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer 
+from sklearn.model_selection import train_test_split 
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.linear_model import LogisticRegression 
+from sklearn.svm import SVC 
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix 
+from filelock import FileLock 
+import hashlib 
+import subprocess 
 
 # Importar funções de MongoDB
-from db_mongo.conexao_mongo import salvar_no_mongo # Função para salvar dados no MongoDB
+from db_mongo.conexao_mongo import salvar_no_mongo 
 
 # ---------------------------- CONFIG ----------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Essa parte é importante para o Dagster encontrar os arquivos e diretórios
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados") # Diretório de resultados
-os.makedirs(RESULTADOS_DIR, exist_ok=True) # Cria diretório se não existir
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb") # Arquivo DuckDB
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project") # Diretório do projeto DBT
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock")) # Lock para controle concorrente do DuckDB
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados") 
+os.makedirs(RESULTADOS_DIR, exist_ok=True)
+DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb") 
+DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project") 
+duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock")) 
 
 # ---------------------------- FUNÇÕES AUXILIARES ----------------------------
 def run_spider(spider, raw_table_name, collection_name):
