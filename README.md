@@ -37,30 +37,6 @@ Este projeto tem como objetivo **coletar notícias** de diferentes fontes (econo
 4. **Armazenamento de Resultados**  
    - O projeto pode salvar informações processadas no DuckDB, em MongoDB e gerar relatórios locais (CSV, TXT).  
 
-## Estrutura de Pastas (Exemplo)
-
-.
-├── dbt_project/
-│   ├── dbt_project.yml
-│   ├── models/
-│   ├── snapshots/
-│   └── ...
-├── projeto_dados/
-│   ├── assets.py
-│   ├── resultados/
-│   ├── data/
-│   └── ...
-├── crawler_noticia/
-│   ├── economia/
-│   │   └── spiders/
-│   └── governo/
-│       └── spiders/
-├── noticias.duckdb
-├── duckdb.lock
-├── requirements.txt
-└── README.md   <-- (este arquivo)
-
-
 
 ## Principais Comandos
 
