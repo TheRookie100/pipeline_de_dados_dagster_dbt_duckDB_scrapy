@@ -1,10 +1,18 @@
 Relatório de Treinamento de IA para economia
 ==================================================
 
-Dados insuficientes para treinamento.
-
 Distribuição de Sentimentos:
 Sentimento  Contagem
-    neutro         8
-  negativo         4
-Nenhuma métrica foi gerada.
+    neutro        16
+  negativo         8
+  positivo         3
+
+Métricas dos Modelos:
+         Algoritmo  Acurácia  Precisão  Recall  F1-Score
+      RandomForest  1.000000       1.0     1.0       1.0
+LogisticRegression  0.833333       0.0     0.0       0.0
+               SVM  1.000000       1.0     1.0       1.0
+
+Observações:
+IA analisando sentimento com VADER.
+Classes: Positivo(1), Negativo(0).
