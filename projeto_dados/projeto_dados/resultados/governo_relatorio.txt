@@ -5,5 +5,5 @@ Dados insuficientes para treinamento.
 
 Distribuição de Sentimentos:
 Sentimento  Contagem
-    neutro        36
+    neutro        41
 Nenhuma métrica foi gerada.
