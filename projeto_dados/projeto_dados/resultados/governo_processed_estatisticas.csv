@@ -1,0 +1,12 @@
+,id,titulo_noticia,texto,data_publicacao,texto_para_sentimento,sentimento,sentimento_classificacao,target
+count,33,33,33,33,33,33.0,33,33.0
+unique,33,27,32,1,27,,1,
+top,36cf7aa12d209d20dcf5586b2c1b0dda,{'text': 'Governo divulga calendário de feriados e pontos facultativos em 2025; veja datas'},{'text': ''},,{'text': 'Governo divulga calendário de feriados e pontos facultativos em 2025; veja datas'},,neutro,
+freq,1,2,2,33,2,,33,
+mean,,,,,,0.0,,0.0
+std,,,,,,0.0,,0.0
+min,,,,,,0.0,,0.0
+25%,,,,,,0.0,,0.0
+50%,,,,,,0.0,,0.0
+75%,,,,,,0.0,,0.0
+max,,,,,,0.0,,0.0

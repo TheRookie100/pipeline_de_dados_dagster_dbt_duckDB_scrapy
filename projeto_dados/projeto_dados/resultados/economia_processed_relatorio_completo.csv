@@ -1,0 +1,39 @@
+Relatório Estatístico para economia_processed
+============================================================
+
+1) Total de registros: 34
+
+2) Nulos por coluna:
+,0
+id,0
+titulo_noticia,0
+texto,0
+data_publicacao,34
+time_ago,0
+texto_para_sentimento,0
+sentimento,0
+sentimento_classificacao,0
+target,0
+
+3) Distribuição de Sentimento:
+sentimento_classificacao,count
+neutro,21
+negativo,9
+positivo,4
+
+4) Distribuição de Target:
+target,count
+0,30
+1,4
+
+5) Estatísticas Numéricas:
+,data_publicacao,sentimento,target
+count,0.0,34.0,34.0
+mean,,-0.007835294117647051,0.11764705882352941
+std,,0.2595788032182403,0.3270349700838643
+min,,-0.296,0.0
+25%,,-0.22199999999999998,0.0
+50%,,0.0,0.0
+75%,,0.0,0.0
+max,,0.5994,1.0
+
