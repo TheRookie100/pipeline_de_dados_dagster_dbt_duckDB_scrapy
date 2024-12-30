@@ -1,6 +1,6 @@
 name: 'projeto_dados'
 version: '1.0'
-config-version: 1
+config-version: 2
 
 profile: noticias
 
