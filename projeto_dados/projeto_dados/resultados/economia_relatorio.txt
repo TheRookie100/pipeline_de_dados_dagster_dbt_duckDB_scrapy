@@ -1,0 +1,10 @@
+Relatório de Treinamento de IA para economia
+==================================================
+
+Dados insuficientes para treinamento.
+
+Distribuição de Sentimentos:
+Sentimento  Contagem
+    neutro         4
+  negativo         3
+Nenhuma métrica foi gerada.

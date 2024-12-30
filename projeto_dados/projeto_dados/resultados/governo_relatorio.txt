@@ -1,0 +1,9 @@
+Relatório de Treinamento de IA para governo
+==================================================
+
+Dados insuficientes para treinamento.
+
+Distribuição de Sentimentos:
+Sentimento  Contagem
+    neutro        15
+Nenhuma métrica foi gerada.

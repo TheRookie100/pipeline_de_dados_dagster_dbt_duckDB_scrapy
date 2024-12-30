@@ -1,6 +1,6 @@
 name: 'projeto_dados'
 version: '1.0'
-config-version: 2
+config-version: 1
 
 profile: noticias
 
@@ -11,14 +11,3 @@ model-paths: ["models/economia", "models/governo"]
 models:
   projeto_dados:
     +materialized: view  # Pode ser 'view', 'table', 'incremental', etc.
-    +persist_docs: true  # Persistir a documentação dos modelos
-    +persist_columns: true  # Persistir a documentação das colunas
-    +unique_key: id  # Chave única para o modelo
-    +sort: id  # Coluna para ordenar o modelo
-    +enabled: true  # Habilitar o modelo
-    +post-hook: ""  # Comandos SQL a serem executados após a criação do modelo
-    +pre-hook: ""  # Comandos SQL a serem executados antes da criação do modelo
-    +vars: {}  # Variáveis para o modelo
-    +column_types: {}  # Tipos de dados para as colunas do modelo
-    +tags: []  # Tags para o modelo
-    +meta: {}  # Metadados para o modelo

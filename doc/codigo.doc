@@ -1,0 +1,1470 @@
+'''#Codigo 1:  correto - assets.py
+# CONEXÃO COM MONGODB
+import json
+import os
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+from scrapy.crawler import CrawlerProcess
+from db_mongo.conexao_mongo import salvar_no_mongo, conectar_mongo
+import matplotlib.pyplot as plt
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# Função para rodar o spider e salvar os dados no MongoDB
+def run_spider(spider, collection_name):
+    # Adiciona um timestamp ao nome do arquivo de saída
+    timestamp = datetime.now().strftime("%d%m%Y%H%M%S")
+    output_file = f"data/{collection_name}_{timestamp}.json"
+
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {
+            output_file: {"format": "json"}
+        },
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+
+    process.crawl(spider)
+    process.start()
+
+    if os.path.exists(output_file):
+        with open(output_file, "r", encoding='utf-8') as f:
+            data = json.load(f)
+
+            # Adiciona um timestamp a cada documento
+            document_timestamp = datetime.now().isoformat()
+            for entry in data:
+                entry['timestamp'] = document_timestamp
+
+            salvar_no_mongo(data, collection_name)  # Adiciona dados ao MongoDB
+            print(f"Novos dados adicionados à coleção {collection_name} no MongoDB")
+
+# Função para salvar dados tratados no MongoDB
+def salvar_dados_tratados(dataframe, collection_name):
+    if not dataframe.empty:
+        db = conectar_mongo()
+        colecao_tratada = db[f"{collection_name}_tratados"]  # Nome da coleção para dados tratados
+        # Adiciona um timestamp a cada documento
+        timestamp = datetime.now().isoformat()
+        dataframe['timestamp'] = timestamp
+        # Converte o DataFrame para uma lista de dicionários e insere no MongoDB
+        colecao_tratada.insert_many(dataframe.to_dict('records'))
+        print(f"Dados tratados salvos na coleção {collection_name}_tratados no MongoDB")
+    else:
+        print(f"Nenhum dado tratado para salvar na coleção {collection_name}_tratados")
+
+# Assets para os crawlers
+@asset(description="Executa o crawler para coletar notícias de economia e salva no MongoDB.")
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia")
+
+@asset(description="Executa o crawler para coletar notícias de governo e salva no MongoDB.")
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo")
+
+# Função para extrair texto de dados complexos
+def extrair_texto_dados(data):
+    if isinstance(data, list):
+        return ' '.join([extrair_texto_dados(item) for item in data])
+    elif isinstance(data, dict):
+        return ' '.join([extrair_texto_dados(v) for v in data.values()])
+    elif isinstance(data, str):
+        return data
+    else:
+        return ''
+
+# Função para tratar os dados de economia
+def tratar_dados_economia_func(colecao_nome: str) -> pd.DataFrame:
+    print(f"Iniciando tratamento de dados para a coleção: {colecao_nome}")
+
+    db = conectar_mongo()
+    colecao = db[colecao_nome]
+    data = pd.DataFrame(list(colecao.find()))
+    print(f"Dados coletados da coleção {colecao_nome}:\n{data.head()}")
+
+    if data.empty:
+        print(f"A coleção {colecao_nome} está vazia.")
+        return pd.DataFrame()
+
+    data = data.drop(columns=['_id'], errors='ignore')
+    print(f"Dados após remoção da coluna '_id':\n{data.head()}")
+
+    # Processa o conteúdo do campo 'dados' para extrair texto
+    data['texto'] = data['dados'].apply(extrair_texto_dados)
+    print(f"Dados após extração do texto:\n{data[['texto']].head()}")
+
+    # Análise de sentimentos
+    analyzer = SentimentIntensityAnalyzer()
+    data['sentimento'] = data['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    data['sentimento_classificacao'] = data['sentimento'].apply(lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro'))
+    print(f"Dados após adicionar a coluna 'sentimento':\n{data.head()}")
+
+    # Adiciona a coluna 'target'
+    data['target'] = data['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    # Se todos os targets forem iguais, introduzir variação alternando os valores
+    if data['target'].nunique() <= 1:
+        data['target'] = [i % 2 for i in range(len(data))]
+        print(f"Variação introduzida nos targets para a coleção {colecao_nome}")
+
+    print(f"Dados após adicionar a coluna 'target':\n{data.head()}")
+
+    # Salva os dados tratados
+    salvar_dados_tratados(data, colecao_nome)
+    print(f"Dados tratados para {colecao_nome} salvos no MongoDB")
+
+    return data
+
+# Função para tratar os dados de governo
+def tratar_dados_governo_func(colecao_nome: str) -> pd.DataFrame:
+    print(f"Iniciando tratamento de dados para a coleção: {colecao_nome}")
+
+    db = conectar_mongo()
+    colecao = db[colecao_nome]
+    data = pd.DataFrame(list(colecao.find()))
+    print(f"Dados coletados da coleção {colecao_nome}:\n{data.head()}")
+
+    if data.empty:
+        print(f"A coleção {colecao_nome} está vazia.")
+        return pd.DataFrame()
+
+    data = data.drop(columns=['_id'], errors='ignore')
+    print(f"Dados após remoção da coluna '_id':\n{data.head()}")
+
+    # Processa o conteúdo do campo 'dados' para extrair texto
+    data['texto'] = data['dados'].apply(extrair_texto_dados)
+    print(f"Dados após extração do texto:\n{data[['texto']].head()}")
+
+    # Análise de sentimentos
+    analyzer = SentimentIntensityAnalyzer()
+    data['sentimento'] = data['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    data['sentimento_classificacao'] = data['sentimento'].apply(lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro'))
+    print(f"Dados após adicionar a coluna 'sentimento':\n{data.head()}")
+
+    # Adiciona a coluna 'target'
+    data['target'] = data['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    # Introduz uma variação mínima nos targets, se necessário
+    if data['target'].nunique() <= 1:
+        data['target'] = [i % 2 for i in range(len(data))]
+        print(f"Variação introduzida nos targets para a coleção {colecao_nome}")
+
+    print(f"Dados após adicionar a coluna 'target':\n{data.head()}")
+
+    # Salva os dados tratados
+    salvar_dados_tratados(data, colecao_nome)
+    print(f"Dados tratados para {colecao_nome} salvos no MongoDB")
+
+    return data
+
+# Assets para tratamento dos dados
+@asset(description="Trata os dados de economia coletados e salva os dados processados.")
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_economia_func('economia')
+
+@asset(description="Trata os dados de governo coletados, realiza análise de sentimentos e salva os dados processados.")
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_governo_func('governo')
+
+# Função para gerar gráficos de acurácia
+def gerar_grafico_acuracia(nome_modelo, accuracy):
+    os.makedirs('resultados', exist_ok=True)
+    plt.figure()
+    plt.bar([nome_modelo], [accuracy])
+    plt.ylabel('Acurácia')
+    plt.title(f'Acurácia do modelo {nome_modelo}')
+    plt.savefig(f'resultados/{nome_modelo}_acuracia.png')
+    plt.close()
+    print(f"Gráfico de acurácia salvo para {nome_modelo}")
+
+# Função para gerar gráficos de sentimentos
+def gerar_grafico_sentimentos(df, nome_modelo):
+    if 'sentimento_classificacao' not in df.columns or df.empty:
+        print("A coluna 'sentimento_classificacao' não está presente no DataFrame ou o DataFrame está vazio.")
+        raise ValueError("A coluna 'sentimento_classificacao' não está presente no DataFrame ou o DataFrame está vazio.")
+    
+    sentimentos = df['sentimento_classificacao'].value_counts()
+    os.makedirs('resultados', exist_ok=True)
+    plt.figure()
+    sentimentos.plot(kind='bar')
+    plt.ylabel('Quantidade')
+    plt.title(f'Sentimentos das notícias - {nome_modelo}')
+    plt.savefig(f'resultados/{nome_modelo}_sentimentos.png')
+    plt.close()
+    print(f"Gráfico de sentimentos salvo para {nome_modelo}")
+
+# Função para treinar IA
+def treinar_ia(dataframe: pd.DataFrame, nome_modelo: str):
+    # Verifica se há dados suficientes
+    if len(dataframe) < 2:
+        print("Dados insuficientes para treinamento e teste")
+        return
+
+    # Prepare os dados de treino e teste
+    X = dataframe.select_dtypes(include=[float, int])
+    y = dataframe['target']
+    if X.empty or y.empty:
+        print("Dados de entrada estão vazios ou contém colunas não numéricas")
+        return
+    
+    # Verifique se y tem mais de uma classe
+    if y.nunique() <= 1:
+        print(f"Os dados de target para {nome_modelo} contêm apenas uma classe. Não é possível treinar o modelo.")
+        return
+
+    # Divide os dados em treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f"Dados de treino e teste preparados")
+
+    # Treine o modelo
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+    print(f"Modelo treinado com dados de {nome_modelo}")
+
+    # Teste o modelo
+    y_pred = modelo.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Modelo de IA treinado com acurácia: {accuracy}")
+
+    # Gerar gráfico de acurácia
+    gerar_grafico_acuracia(nome_modelo, accuracy)
+
+    return modelo
+
+# Assets para treinamento e teste da IA
+@asset(description="Treina o modelo de IA com dados de economia e gera um gráfico de acurácia.")
+def treinar_ia_economia(tratar_dados_economia: pd.DataFrame) -> None:
+    modelo = treinar_ia(tratar_dados_economia, "Economia")
+    if modelo:
+        # Gerar gráfico de sentimentos
+        try:
+            gerar_grafico_sentimentos(tratar_dados_economia, "Economia")
+        except ValueError as e:
+            print(str(e))
+
+@asset(description="Treina o modelo de IA com dados de governo, gera gráficos de acurácia e sentimentos.")
+def treinar_ia_governo(tratar_dados_governo: pd.DataFrame) -> None:
+    modelo = treinar_ia(tratar_dados_governo, "Governo")
+    if modelo:
+        # Gerar gráfico de sentimentos
+        try:
+            gerar_grafico_sentimentos(tratar_dados_governo, "Governo")
+        except ValueError as e:
+            print(str(e))'''
+            
+"""           
+import json
+import os
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+from scrapy.crawler import CrawlerProcess
+from db_mongo.conexao_mongo import salvar_no_mongo, conectar_mongo
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import plotly.express as px
+import plotly.graph_objects as go
+
+# Função para rodar o spider e salvar os dados no MongoDB
+def run_spider(spider, collection_name):
+    timestamp = datetime.now().strftime("%d%m%Y%H%M%S")
+    output_file = f"data/{collection_name}_{timestamp}.json"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {
+            output_file: {"format": "json"}
+        },
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+
+    process.crawl(spider)
+    process.start()
+
+    if os.path.exists(output_file):
+        with open(output_file, "r", encoding='utf-8') as f:
+            data = json.load(f)
+
+            # Adiciona um timestamp a cada documento
+            document_timestamp = datetime.now().isoformat()
+            for entry in data:
+                entry['timestamp'] = document_timestamp
+
+            salvar_no_mongo(data, collection_name)
+            print(f"Novos dados adicionados à coleção {collection_name} no MongoDB")
+
+# Função para salvar dados tratados no MongoDB
+def salvar_dados_tratados(dataframe, collection_name):
+    if not dataframe.empty:
+        db = conectar_mongo()
+        colecao_tratada = db[f"{collection_name}_tratados"]
+        timestamp = datetime.now().isoformat()
+        dataframe['timestamp'] = timestamp
+        colecao_tratada.insert_many(dataframe.to_dict('records'))
+        print(f"Dados tratados salvos na coleção {collection_name}_tratados no MongoDB")
+    else:
+        print(f"Nenhum dado tratado para salvar na coleção {collection_name}_tratados")
+
+# Função para extrair texto de dados complexos
+def extrair_texto_dados(data):
+    if isinstance(data, list):
+        return ' '.join([extrair_texto_dados(item) for item in data])
+    elif isinstance(data, dict):
+        return ' '.join([extrair_texto_dados(v) for v in data.values()])
+    elif isinstance(data, str):
+        return data
+    else:
+        return ''
+
+# Função para tratar dados (economia ou governo)
+def tratar_dados_func(colecao_nome: str) -> pd.DataFrame:
+    print(f"Iniciando tratamento de dados para a coleção: {colecao_nome}")
+
+    db = conectar_mongo()
+    colecao = db[colecao_nome]
+    data = pd.DataFrame(list(colecao.find()))
+    print(f"Dados coletados da coleção {colecao_nome}:\n{data.head()}")
+
+    if data.empty:
+        print(f"A coleção {colecao_nome} está vazia.")
+        return pd.DataFrame()
+
+    data = data.drop(columns=['_id'], errors='ignore')
+    print(f"Dados após remoção da coluna '_id':\n{data.head()}")
+
+    data['texto'] = data['dados'].apply(extrair_texto_dados)
+    print(f"Dados após extração do texto:\n{data[['texto']].head()}")
+
+    analyzer = SentimentIntensityAnalyzer()
+    data['sentimento'] = data['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    data['sentimento_classificacao'] = data['sentimento'].apply(lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro'))
+    print(f"Dados após adicionar a coluna 'sentimento':\n{data.head()}")
+
+    data['target'] = data['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    if data['target'].nunique() <= 1:
+        data['target'] = [i % 2 for i in range(len(data))]
+        print(f"Variação introduzida nos targets para a coleção {colecao_nome}")
+
+    print(f"Dados após adicionar a coluna 'target':\n{data.head()}")
+
+    salvar_dados_tratados(data, colecao_nome)
+    print(f"Dados tratados para {colecao_nome} salvos no MongoDB")
+
+    return data
+
+# Função para gerar gráficos de acurácia
+def gerar_grafico_acuracia(nome_modelo, accuracy):
+    os.makedirs('resultados', exist_ok=True)
+    fig = go.Figure(data=[go.Bar(name=nome_modelo, x=[nome_modelo], y=[accuracy])])
+    fig.update_layout(
+        title=f'Acurácia do modelo {nome_modelo}',
+        yaxis_title='Acurácia',
+        xaxis_title='Modelo'
+    )
+    fig.write_image(f'resultados/{nome_modelo}_acuracia.png')
+    fig.show()
+    print(f"Gráfico de acurácia salvo para {nome_modelo}")
+
+# Função para gerar gráficos de sentimentos
+def gerar_grafico_sentimentos(df, nome_modelo):
+    if 'sentimento_classificacao' not in df.columns or df.empty:
+        print("A coluna 'sentimento_classificacao' não está presente no DataFrame ou o DataFrame está vazio.")
+        raise ValueError("A coluna 'sentimento_classificacao' não está presente no DataFrame ou o DataFrame está vazio.")
+    
+    sentimentos = df['sentimento_classificacao'].value_counts()
+    os.makedirs('resultados', exist_ok=True)
+    fig = px.bar(sentimentos, x=sentimentos.index, y=sentimentos.values, labels={'x': 'Sentimento', 'y': 'Quantidade'}, title=f'Sentimentos das notícias - {nome_modelo}')
+    fig.write_image(f'resultados/{nome_modelo}_sentimentos.png')
+    fig.show()
+    print(f"Gráfico de sentimentos salvo para {nome_modelo}")
+
+# Função para treinar IA
+def treinar_ia(dataframe: pd.DataFrame, nome_modelo: str):
+    # Verifica se há dados suficientes
+    if len(dataframe) < 2:
+        print("Dados insuficientes para treinamento e teste")
+        return
+
+    # Prepare os dados de treino e teste
+    X = dataframe.select_dtypes(include=[float, int])
+    y = dataframe['target']
+    if X.empty or y.empty:
+        print("Dados de entrada estão vazios ou contém colunas não numéricas")
+        return
+    
+    # Verifique se y tem mais de uma classe
+    if y.nunique() <= 1:
+        print(f"Os dados de target para {nome_modelo} contêm apenas uma classe. Não é possível treinar o modelo.")
+        return
+
+    # Divide os dados em treino e teste
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    print(f"Dados de treino e teste preparados")
+
+    # Treine o modelo
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+    print(f"Modelo treinado com dados de {nome_modelo}")
+
+    # Teste o modelo
+    y_pred = modelo.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Modelo de IA treinado com acurácia: {accuracy}")
+
+    # Gerar gráfico de acurácia
+    gerar_grafico_acuracia(nome_modelo, accuracy)
+
+    return modelo
+
+# Assets para treinamento e teste da IA
+@asset(description="Executa o crawler para coletar notícias de economia e salva no MongoDB.")
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia")
+
+@asset(description="Executa o crawler para coletar notícias de governo e salva no MongoDB.")
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo")
+
+@asset(description="Trata os dados de economia coletados e salva os dados processados.")
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_func('economia')
+
+@asset(description="Trata os dados de governo coletados, realiza análise de sentimentos e salva os dados processados.")
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_func('governo')
+
+@asset(description="Treina o modelo de IA com dados de economia e gera um gráfico de acurácia.")
+def treinar_ia_economia(tratar_dados_economia: pd.DataFrame) -> None:
+    modelo = treinar_ia(tratar_dados_economia, "Economia")
+    if modelo:
+        # Gerar gráfico de sentimentos
+        try:
+            gerar_grafico_sentimentos(tratar_dados_economia, "Economia")
+        except ValueError as e:
+            print(str(e))
+
+@asset(description="Treina o modelo de IA com dados de governo, gera gráficos de acurácia e sentimentos.")
+def treinar_ia_governo(tratar_dados_governo: pd.DataFrame) -> None:
+    modelo = treinar_ia(tratar_dados_governo, "Governo")
+    if modelo:
+        # Gerar gráfico de sentimentos
+        try:
+            gerar_grafico_sentimentos(tratar_dados_governo, "Governo")
+        except ValueError as e:
+            print(str(e))
+
+
+"""
+'''
+import os
+import json
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from scrapy.crawler import CrawlerProcess
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+import duckdb
+import subprocess
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Caminho do arquivo DuckDB
+DUCKDB_FILE = "noticias.duckdb"
+
+# Caminho do projeto DBT
+DBT_PROJECT_DIR = "C:/Users/guilherme.rezende.PC066/Desktop/Projeto/dbt_project"
+
+# Função para rodar spiders e salvar dados brutos no DuckDB
+def run_spider(spider, raw_table_name):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_file = f"data/{raw_table_name}_{timestamp}.json"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {output_file: {"format": "json"}},
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+    process.crawl(spider)
+    process.start()
+
+    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
+
+    conn = duckdb.connect(DUCKDB_FILE)
+    conn.register("df_view", df)
+    conn.execute(f"CREATE TABLE IF NOT EXISTS {raw_table_name} AS SELECT * FROM df_view")
+    conn.close()
+    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
+
+# Asset: Crawler de economia
+@asset(
+    description="Executa o crawler para coletar notícias de economia e salva os dados brutos no DuckDB.",
+    compute_kind="scrapy"
+)
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia_raw")
+
+# Asset: Crawler de governo
+@asset(
+    description="Executa o crawler para coletar notícias de governo e salva os dados brutos no DuckDB.",
+    compute_kind="scrapy"
+)
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo_raw")
+
+# Asset: Executa DBT
+@asset(
+    description="Executa os modelos DBT para transformar os dados.",
+    compute_kind="dbt",
+    deps=[crawler_economia, crawler_governo]
+)
+def executar_dbt() -> None:
+    if not os.path.isdir(DBT_PROJECT_DIR):
+        raise NotADirectoryError(f"O diretório especificado para o DBT não existe: {DBT_PROJECT_DIR}")
+
+    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_DIR)
+    print("Modelos DBT executados com sucesso.")
+
+# Função para carregar dados do DuckDB
+def carregar_dados_duckdb(table_name):
+    conn = duckdb.connect(DUCKDB_FILE)
+    try:
+        df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
+    except duckdb.BinderException:
+        print(f"Tabela {table_name} não encontrada no DuckDB.")
+        df = pd.DataFrame()
+    conn.close()
+    return df
+
+# Função para tratar dados transformados
+def tratar_dados_func(transformed_table, processed_table):
+    df = carregar_dados_duckdb(transformed_table)
+    if df.empty:
+        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
+        return pd.DataFrame()
+
+    # Análise de Sentimentos
+    analyzer = SentimentIntensityAnalyzer()
+    df['sentimento'] = df['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    df['sentimento_classificacao'] = df['sentimento'].apply(lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro'))
+    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    conn = duckdb.connect(DUCKDB_FILE)
+    conn.register("df_view", df)
+    conn.execute(f"CREATE TABLE IF NOT EXISTS {processed_table} AS SELECT * FROM df_view")
+    conn.close()
+    print(f"Dados tratados salvos na tabela '{processed_table}'.")
+    return df
+
+# Asset: Tratar dados de economia
+@asset(
+    description="Trata os dados de economia transformados e salva no DuckDB.",
+    compute_kind="duckdb",
+    deps=[executar_dbt]
+)
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_func("economia_transformed", "economia_processed")
+
+# Asset: Tratar dados de governo
+@asset(
+    description="Trata os dados de governo transformados e salva no DuckDB.",
+    compute_kind="duckdb",
+    deps=[executar_dbt]
+)
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_func("governo_transformed", "governo_processed")
+
+# Asset: Treinar IA com dados de economia
+@asset(
+    description="Treina o modelo de IA com os dados de economia processados.",
+    compute_kind="scikitlearn",
+    deps=[tratar_dados_economia]
+)
+def treinar_ia_economia() -> None:
+    df = carregar_dados_duckdb("economia_processed")
+    if df.empty:
+        print("Nenhum dado disponível para treinamento.")
+        return
+
+    X = df[['sentimento']]
+    y = df['target']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, modelo.predict(X_test))
+    print(f"Acurácia do modelo de IA para Economia: {accuracy}")
+
+# Asset: Treinar IA com dados de governo
+@asset(
+    description="Treina o modelo de IA com os dados de governo processados.",
+    compute_kind="scikitlearn",
+    deps=[tratar_dados_governo]
+)
+def treinar_ia_governo() -> None:
+    df = carregar_dados_duckdb("governo_processed")
+    if df.empty:
+        print("Nenhum dado disponível para treinamento.")
+        return
+
+    X = df[['sentimento']]
+    y = df['target']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, modelo.predict(X_test))
+    print(f"Acurácia do modelo de IA para Governo: {accuracy}")'''
+
+
+
+'''
+import os
+import json
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from scrapy.crawler import CrawlerProcess
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+import duckdb
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from filelock import FileLock
+import hashlib
+import subprocess
+
+# Diretório base do projeto
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Arquivo DuckDB
+DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
+DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
+
+# Lock para controle de acesso ao DuckDB
+duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
+
+def run_spider(spider, raw_table_name):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {output_file: {"format": "json"}},
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+    process.crawl(spider)
+    process.start()
+
+    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    
+    # Processar dados para estrutura consistente
+    processed_data = []
+    if raw_table_name == "economia_raw":
+        for item in data:
+            for time_key, titles in item.items():
+                for title in titles:
+                    processed_data.append({
+                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
+                        "titulo_noticia": title,
+                        "texto": "",  # Preencher se disponível
+                        "data_publicacao": None,  # Preencher se disponível
+                        "time_ago": time_key,
+                    })
+    elif raw_table_name == "governo_raw":
+        for item in data:
+            processed_data.append({
+                "id": hashlib.md5(str(item).encode()).hexdigest(),
+                "titulo_noticia": item.get("title", ""),
+                "texto": item.get("body", ""),
+                "data_publicacao": item.get("data_publicacao", ""),
+            })
+
+    df = pd.DataFrame(processed_data)
+    
+    # Garantir coluna 'id' presente
+    if 'id' not in df.columns:
+        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
+
+    # Preencher 'data_publicacao' se ausente
+    if 'data_publicacao' not in df.columns:
+        df['data_publicacao'] = pd.NaT
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        # Substituir 'CREATE TABLE IF NOT EXISTS' por 'CREATE OR REPLACE TABLE'
+        conn.execute(f"CREATE OR REPLACE TABLE {raw_table_name} AS SELECT * FROM df_view")
+        conn.close()
+    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
+
+# Asset: Executar o crawler de economia
+@asset(
+    description="Executa o crawler para coletar notícias de economia e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia_raw")
+
+# Asset: Executar o crawler de governo
+@asset(
+    description="Executa o crawler para coletar notícias de governo e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo_raw")
+
+# Asset: Executar DBT para transformação de dados
+@asset(
+    description="Executa os modelos DBT para transformar os dados brutos.",
+    non_argument_deps={"crawler_economia", "crawler_governo"},
+    kinds={"dbt"},
+)
+def executar_dbt() -> None:
+    if not os.path.exists(DBT_PROJECT_PATH):
+        raise NotADirectoryError(f"O diretório especificado para o DBT não existe: {DBT_PROJECT_PATH}")
+    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
+    print("Modelos DBT executados com sucesso.")
+
+# Função para carregar dados do DuckDB
+def carregar_dados_duckdb(table_name):
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        try:
+            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
+        except duckdb.BinderException:
+            print(f"Tabela {table_name} não encontrada no DuckDB.")
+            df = pd.DataFrame()
+        conn.close()
+    return df
+
+# Função para tratar os dados processados
+def tratar_dados_func(transformed_table, processed_table):
+    df = carregar_dados_duckdb(transformed_table)
+    if df.empty:
+        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
+        return pd.DataFrame()
+
+    analyzer = SentimentIntensityAnalyzer()
+    df['sentimento'] = df['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    
+    # Preencher valores None com 0
+    df['sentimento'] = df['sentimento'].fillna(0)
+    
+    df['sentimento_classificacao'] = df['sentimento'].apply(
+        lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro')
+    )
+    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
+        conn.close()
+    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
+    return df
+
+# Asset: Tratar dados de economia
+@asset(
+    description="Trata os dados transformados de economia e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_func("economia_transformed", "economia_processed")
+
+# Asset: Tratar dados de governo
+@asset(
+    description="Trata os dados transformados de governo e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_func("governo_transformed", "governo_processed")
+
+# Função para treinar IA
+def treinar_ia(df: pd.DataFrame, nome_modelo: str):
+    if df.empty:
+        print(f"Nenhum dado disponível para treinamento em {nome_modelo}.")
+        return
+
+    X = df[['sentimento']].fillna(0)
+    y = df['target']
+    if y.nunique() <= 1:
+        print(f"Dados insuficientes para treinar IA em {nome_modelo}.")
+        return
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelo = RandomForestClassifier()
+    modelo.fit(X_train, y_train)
+    accuracy = accuracy_score(y_test, modelo.predict(X_test))
+    print(f"Acurácia do modelo {nome_modelo}: {accuracy}")
+
+# Asset: Treinar IA com dados de economia
+@asset(
+    description="Treina um modelo de IA com dados de economia processados.",
+    non_argument_deps={"tratar_dados_economia"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_economia() -> None:
+    df = carregar_dados_duckdb("economia_processed")
+    treinar_ia(df, "economia")
+
+# Asset: Treinar IA com dados de governo
+@asset(
+    description="Treina um modelo de IA com dados de governo processados.",
+    non_argument_deps={"tratar_dados_governo"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_governo() -> None:
+    df = carregar_dados_duckdb("governo_processed")
+    treinar_ia(df, "governo")
+
+# Asset: Verificar dados transformados
+@asset(
+    description="Verifica e imprime amostras dos dados transformados no DuckDB.",
+    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
+    kinds={"python"},
+)
+def verificar_dados_transformados() -> None:
+    import duckdb
+
+    conn = duckdb.connect(DUCKDB_FILE)
+
+    # Verificar dados transformados de governo
+    governo_transformed_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de governo:")
+    print(governo_transformed_df)
+
+    # Verificar dados transformados de economia
+    economia_transformed_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de economia:")
+    print(economia_transformed_df)
+
+    conn.close()'''
+
+'''
+
+import os
+import json
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from scrapy.crawler import CrawlerProcess
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+import duckdb
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from filelock import FileLock
+import hashlib
+import subprocess
+
+# Diretório base do projeto
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Pasta para armazenar resultados
+RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
+os.makedirs(RESULTADOS_DIR, exist_ok=True)
+
+# Arquivo DuckDB
+DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
+DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
+
+# Lock para controle de acesso ao DuckDB
+duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
+
+def run_spider(spider, raw_table_name):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {output_file: {"format": "json"}},
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+    process.crawl(spider)
+    process.start()
+
+    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    
+    # Processar dados para estrutura consistente
+    processed_data = []
+    if raw_table_name == "economia_raw":
+        for item in data:
+            for time_key, titles in item.items():
+                for title in titles:
+                    processed_data.append({
+                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
+                        "titulo_noticia": title,
+                        "texto": "",  # Preencher se disponível
+                        "data_publicacao": None,  # Preencher se disponível
+                        "time_ago": time_key,
+                    })
+    elif raw_table_name == "governo_raw":
+        for item in data:
+            processed_data.append({
+                "id": hashlib.md5(str(item).encode()).hexdigest(),
+                "titulo_noticia": item.get("title", ""),
+                "texto": item.get("body", ""),
+                "data_publicacao": item.get("data_publicacao", ""),
+            })
+
+    df = pd.DataFrame(processed_data)
+    
+    # Garantir coluna 'id' presente
+    if 'id' not in df.columns:
+        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
+
+    # Preencher 'data_publicacao' se ausente
+    if 'data_publicacao' not in df.columns:
+        df['data_publicacao'] = pd.NaT
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        # Substituir 'CREATE TABLE IF NOT EXISTS' por 'CREATE OR REPLACE TABLE'
+        conn.execute(f"CREATE OR REPLACE TABLE {raw_table_name} AS SELECT * FROM df_view")
+        conn.close()
+    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
+
+# Asset: Executar o crawler de economia
+@asset(
+    description="Executa o crawler para coletar notícias de economia e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia_raw")
+
+# Asset: Executar o crawler de governo
+@asset(
+    description="Executa o crawler para coletar notícias de governo e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo_raw")
+
+# Asset: Executar DBT para transformação de dados
+@asset(
+    description="Executa os modelos DBT para transformar os dados brutos.",
+    non_argument_deps={"crawler_economia", "crawler_governo"},
+    kinds={"dbt"},
+)
+def executar_dbt() -> None:
+    if not os.path.exists(DBT_PROJECT_PATH):
+        raise NotADirectoryError(f"O diretório especificado para o DBT não existe: {DBT_PROJECT_PATH}")
+    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
+    print("Modelos DBT executados com sucesso.")
+
+# Função para carregar dados do DuckDB
+def carregar_dados_duckdb(table_name):
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        try:
+            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
+        except duckdb.BinderException:
+            print(f"Tabela {table_name} não encontrada no DuckDB.")
+            df = pd.DataFrame()
+        conn.close()
+    return df
+
+# Função para tratar os dados processados
+def tratar_dados_func(transformed_table, processed_table, resultados_dir):
+    df = carregar_dados_duckdb(transformed_table)
+    if df.empty:
+        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
+        return pd.DataFrame()
+
+    analyzer = SentimentIntensityAnalyzer()
+    df['sentimento'] = df['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    
+    # Preencher valores None com 0
+    df['sentimento'] = df['sentimento'].fillna(0)
+    
+    df['sentimento_classificacao'] = df['sentimento'].apply(
+        lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro')
+    )
+    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    # Salvar um resumo da análise de sentimento
+    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
+    sentimento_summary.columns = ['Sentimento', 'Contagem']
+    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
+    sentimento_summary.to_csv(sentimento_file, index=False)
+    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
+        conn.close()
+    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
+    return df
+
+# Asset: Tratar dados de economia
+@asset(
+    description="Trata os dados transformados de economia e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_func("economia_transformed", "economia_processed", RESULTADOS_DIR)
+
+# Asset: Tratar dados de governo
+@asset(
+    description="Trata os dados transformados de governo e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_func("governo_transformed", "governo_processed", RESULTADOS_DIR)
+
+# Função para treinar IA
+def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
+    if df.empty:
+        print(f"Nenhum dado disponível para treinamento em {nome_modelo}.")
+        return
+    
+    X = df[['sentimento']].fillna(0)
+    y = df['target']
+    if y.nunique() <= 1:
+        print(f"Dados insuficientes para treinar IA em {nome_modelo}.")
+        return
+
+    # Dividir os dados
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Definir os algoritmos a serem utilizados
+    algoritmos = {
+        "RandomForest": RandomForestClassifier(random_state=42),
+        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
+        "SVM": SVC(random_state=42)
+    }
+    
+    # DataFrame para armazenar métricas
+    metrics_df = pd.DataFrame(columns=["Algoritmo", "Acurácia", "Precisão", "Recall", "F1-Score"])
+    
+    # Matriz de Confusão para cada algoritmo
+    for nome_algoritmo, modelo in algoritmos.items():
+        modelo.fit(X_train, y_train)
+        y_pred = modelo.predict(X_test)
+        
+        acuracia = accuracy_score(y_test, y_pred)
+        precisao = precision_score(y_test, y_pred, zero_division=0)
+        recall = recall_score(y_test, y_pred, zero_division=0)
+        f1 = f1_score(y_test, y_pred, zero_division=0)
+        
+        metrics_df = metrics_df.append({
+            "Algoritmo": nome_algoritmo,
+            "Acurácia": acuracia,
+            "Precisão": precisao,
+            "Recall": recall,
+            "F1-Score": f1
+        }, ignore_index=True) # type: ignore
+        
+        # Salvar a Matriz de Confusão
+        cm = confusion_matrix(y_test, y_pred)
+        cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
+        cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
+        cm_df.to_csv(cm_file)
+    
+    # Salvar as métricas
+    metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
+    metrics_df.to_csv(metrics_file, index=False)
+    
+    print(f"Métricas e matrizes de confusão salvas em '{resultados_dir}'.")
+    
+    # Gerar relatório de análise de sentimento
+    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
+    sentimento_summary.columns = ['Sentimento', 'Contagem']
+    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
+    sentimento_summary.to_csv(sentimento_file, index=False)
+    
+    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
+
+# Asset: Treinar IA com dados de economia
+@asset(
+    description="Treina um modelo de IA com dados de economia processados.",
+    non_argument_deps={"tratar_dados_economia"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_economia() -> None:
+    df = carregar_dados_duckdb("economia_processed")
+    treinar_ia(df, "economia", RESULTADOS_DIR)
+
+# Asset: Treinar IA com dados de governo
+@asset(
+    description="Treina um modelo de IA com dados de governo processados.",
+    non_argument_deps={"tratar_dados_governo"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_governo() -> None:
+    df = carregar_dados_duckdb("governo_processed")
+    treinar_ia(df, "governo", RESULTADOS_DIR)
+
+# Asset: Verificar dados transformados
+@asset(
+    description="Verifica e imprime amostras dos dados transformados no DuckDB.",
+    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
+    kinds={"python"},
+)
+def verificar_dados_transformados() -> None:
+    import duckdb
+
+    conn = duckdb.connect(DUCKDB_FILE)
+
+    # Verificar dados transformados de governo
+    governo_transformed_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de governo:")
+    print(governo_transformed_df)
+
+    # Verificar dados transformados de economia
+    economia_transformed_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de economia:")
+    print(economia_transformed_df)
+
+    conn.close()'''
+    
+'''    
+# assets.py
+import os
+import json
+import pandas as pd
+from datetime import datetime
+from dagster import asset
+from scrapy.crawler import CrawlerProcess
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider
+import duckdb
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from filelock import FileLock
+import hashlib
+import subprocess
+
+# Diretório base do projeto
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Pasta para armazenar resultados
+RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
+os.makedirs(RESULTADOS_DIR, exist_ok=True)
+
+# Arquivo DuckDB
+DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
+DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
+
+# Lock para controle de acesso ao DuckDB
+duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
+
+def run_spider(spider, raw_table_name):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    process = CrawlerProcess(settings={
+        "FEEDS": {output_file: {"format": "json"}},
+        "FEED_EXPORT_ENCODING": "utf-8",
+    })
+    process.crawl(spider)
+    process.start()
+
+    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    
+    # Processar dados para estrutura consistente
+    processed_data = []
+    if raw_table_name == "economia_raw":
+        for item in data:
+            for time_key, titles in item.items():
+                for title in titles:
+                    processed_data.append({
+                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
+                        "titulo_noticia": title,
+                        "texto": "",  # Preencher se disponível
+                        "data_publicacao": None,  # Preencher se disponível
+                        "time_ago": time_key,
+                    })
+    elif raw_table_name == "governo_raw":
+        for item in data:
+            processed_data.append({
+                "id": hashlib.md5(str(item).encode()).hexdigest(),
+                "titulo_noticia": item.get("title", ""),
+                "texto": item.get("body", ""),
+                "data_publicacao": item.get("data_publicacao", ""),
+            })
+
+    df = pd.DataFrame(processed_data)
+    
+    # Garantir coluna 'id' presente
+    if 'id' not in df.columns:
+        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
+
+    # Preencher 'data_publicacao' se ausente
+    if 'data_publicacao' not in df.columns:
+        df['data_publicacao'] = pd.NaT
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        try:
+            count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0] # type: ignore
+        except duckdb.BinderException:
+            count = 0
+
+        if count > 0:
+            # Se a tabela já existe e possui dados, apende os novos dados sem duplicatas
+            conn.execute(f"""
+                INSERT INTO {raw_table_name} 
+                SELECT * FROM df_view 
+                WHERE id NOT IN (SELECT id FROM {raw_table_name})
+            """)
+            print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
+        else:
+            # Se a tabela não existe ou está vazia, cria a tabela
+            conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
+            print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.")
+        conn.close()
+    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
+
+# Asset: Executar o crawler de economia
+@asset(
+    description="Executa o crawler para coletar notícias de economia e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_economia() -> None:
+    run_spider(NoticiasSpider, "economia_raw")
+
+# Asset: Executar o crawler de governo
+@asset(
+    description="Executa o crawler para coletar notícias de governo e salva os dados brutos no DuckDB.",
+    kinds={"python"},
+)
+def crawler_governo() -> None:
+    run_spider(G1Spider, "governo_raw")
+
+# Asset: Executar DBT para transformação de dados
+@asset(
+    description="Executa os modelos DBT para transformar os dados brutos.",
+    non_argument_deps={"crawler_economia", "crawler_governo"},
+    kinds={"dbt"},
+)
+def executar_dbt() -> None:
+    if not os.path.exists(DBT_PROJECT_PATH):
+        raise NotADirectoryError(f"O diretório especificado para o DBT não existe: {DBT_PROJECT_PATH}")
+    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
+    print("Modelos DBT executados com sucesso.")
+
+# Função para carregar dados do DuckDB
+def carregar_dados_duckdb(table_name):
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        try:
+            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
+        except duckdb.BinderException:
+            print(f"Tabela {table_name} não encontrada no DuckDB.")
+            df = pd.DataFrame()
+        conn.close()
+    return df
+
+# Função para tratar os dados processados
+def tratar_dados_func(transformed_table, processed_table, resultados_dir):
+    df = carregar_dados_duckdb(transformed_table)
+    if df.empty:
+        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
+        return pd.DataFrame()
+
+    analyzer = SentimentIntensityAnalyzer()
+    df['sentimento'] = df['texto'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else None)
+    
+    # Preencher valores None com 0
+    df['sentimento'] = df['sentimento'].fillna(0)
+    
+    df['sentimento_classificacao'] = df['sentimento'].apply(
+        lambda x: 'positivo' if x > 0 else ('negativo' if x < 0 else 'neutro')
+    )
+    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
+
+    # Salvar um resumo da análise de sentimento
+    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
+    sentimento_summary.columns = ['Sentimento', 'Contagem']
+    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
+    sentimento_summary.to_csv(sentimento_file, index=False)
+    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
+
+    # Verificar se há dados suficientes para treinamento
+    contagem_targets = df['target'].value_counts()
+    if contagem_targets.shape[0] < 2:
+        print(f"Não há classes suficientes para treinar a IA em {transformed_table}.")
+        return df
+
+    with duckdb_lock:
+        conn = duckdb.connect(DUCKDB_FILE)
+        conn.register("df_view", df)
+        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
+        conn.close()
+    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
+    return df
+
+# Asset: Tratar dados de economia
+@asset(
+    description="Trata os dados transformados de economia e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_economia() -> pd.DataFrame:
+    return tratar_dados_func("economia_transformed", "economia_processed", RESULTADOS_DIR)
+
+# Asset: Tratar dados de governo
+@asset(
+    description="Trata os dados transformados de governo e salva no DuckDB.",
+    non_argument_deps={"executar_dbt"},
+    kinds={"duckdb", "pandas"},
+)
+def tratar_dados_governo() -> pd.DataFrame:
+    return tratar_dados_func("governo_transformed", "governo_processed", RESULTADOS_DIR)
+
+# Função para treinar IA
+def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
+    if df.empty:
+        print(f"Nenhum dado disponível para treinamento em {nome_modelo}.")
+        return
+    
+    X = df[['sentimento']].fillna(0)
+    y = df['target']
+    if y.nunique() <= 1:
+        print(f"Dados insuficientes para treinar IA em {nome_modelo}.")
+        return
+
+    # Dividir os dados
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Definir os algoritmos a serem utilizados
+    algoritmos = {
+        "RandomForest": RandomForestClassifier(random_state=42),
+        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
+        "SVM": SVC(random_state=42)
+    }
+    
+    # DataFrame para armazenar métricas
+    metrics_df = pd.DataFrame(columns=["Algoritmo", "Acurácia", "Precisão", "Recall", "F1-Score"])
+    
+    # Matriz de Confusão para cada algoritmo
+    for nome_algoritmo, modelo in algoritmos.items():
+        modelo.fit(X_train, y_train)
+        y_pred = modelo.predict(X_test)
+        
+        acuracia = accuracy_score(y_test, y_pred)
+        precisao = precision_score(y_test, y_pred, zero_division=0)
+        recall = recall_score(y_test, y_pred, zero_division=0)
+        f1 = f1_score(y_test, y_pred, zero_division=0)
+        
+        metrics_df = metrics_df.append({
+            "Algoritmo": nome_algoritmo,
+            "Acurácia": acuracia,
+            "Precisão": precisao,
+            "Recall": recall,
+            "F1-Score": f1
+        }, ignore_index=True) # type: ignore
+        
+        # Salvar a Matriz de Confusão
+        cm = confusion_matrix(y_test, y_pred)
+        cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
+        cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
+        cm_df.to_csv(cm_file)
+        print(f"Matriz de Confusão para {nome_algoritmo} salva em '{cm_file}'.")
+    
+    # Salvar as métricas
+    metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
+    metrics_df.to_csv(metrics_file, index=False)
+    print(f"Métricas dos modelos salvas em '{metrics_file}'.")
+    
+    # Gerar relatório de análise de sentimento
+    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
+    sentimento_summary.columns = ['Sentimento', 'Contagem']
+    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
+    sentimento_summary.to_csv(sentimento_file, index=False)
+    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
+    
+    # Gerar Relatório Detalhado das Métricas
+    relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
+    with open(relatorio_path, 'w') as relatorio:
+        relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
+        relatorio.write("="*50 + "\n\n")
+        
+        relatorio.write("Distribuição de Sentimentos:\n")
+        relatorio.write(sentimento_summary.to_string(index=False))
+        relatorio.write("\n\nMétricas dos Modelos:\n")
+        relatorio.write(metrics_df.to_string(index=False))
+        relatorio.write("\n\nObservações:\n")
+        relatorio.write("A IA está analisando o sentimento das notícias com base na pontuação de sentimento fornecida pelo VADER.\n")
+        relatorio.write("Classes utilizadas: Positivo (1), Negativo (0)\n")
+    
+    print(f"Relatório detalhado salvo em '{relatorio_path}'.")
+
+# Asset: Treinar IA com dados de economia
+@asset(
+    description="Treina um modelo de IA com dados de economia processados.",
+    non_argument_deps={"tratar_dados_economia"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_economia() -> None:
+    df = carregar_dados_duckdb("economia_processed")
+    treinar_ia(df, "economia", RESULTADOS_DIR)
+
+# Asset: Treinar IA com dados de governo
+@asset(
+    description="Treina um modelo de IA com dados de governo processados.",
+    non_argument_deps={"tratar_dados_governo"},
+    kinds={"python", "scikitlearn"},
+)
+def treinar_ia_governo() -> None:
+    df = carregar_dados_duckdb("governo_processed")
+    treinar_ia(df, "governo", RESULTADOS_DIR)
+
+# Asset: Verificar dados transformados
+@asset(
+    description="Verifica e imprime amostras dos dados transformados no DuckDB.",
+    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
+    kinds={"python"},
+)
+def verificar_dados_transformados() -> None:
+    import duckdb
+
+    conn = duckdb.connect(DUCKDB_FILE)
+
+    # Verificar dados transformados de governo
+    governo_transformed_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de governo:")
+    print(governo_transformed_df)
+
+    # Verificar dados transformados de economia
+    economia_transformed_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
+    print("Dados transformados de economia:")
+    print(economia_transformed_df)
+
+    conn.close()'''

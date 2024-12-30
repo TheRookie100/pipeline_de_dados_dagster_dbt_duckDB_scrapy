@@ -1,3 +1,418 @@
+1. DuckDB
+O que é DuckDB?
+DuckDB é um sistema de gerenciamento de banco de dados analítico embutido (Embedded Analytical Database Management System) projetado para oferecer desempenho rápido em consultas analíticas diretamente de aplicações. Ele é otimizado para análise de dados em colunas e suporta SQL padrão, tornando-o uma excelente escolha para tarefas de processamento de dados e análise.
+
+Principais Características:
+Embeddable: Pode ser facilmente integrado em aplicações sem a necessidade de um servidor separado.
+Alto Desempenho: Otimizado para consultas rápidas em grandes conjuntos de dados.
+Suporte a SQL: Compatível com a maioria dos comandos SQL, facilitando a integração com ferramentas existentes.
+Leve e Portátil: O banco de dados é armazenado em um único arquivo, facilitando o compartilhamento e a transferência de dados.
+Por Que Usar DuckDB no Seu Projeto?
+No contexto do seu projeto, DuckDB serve como o data warehouse onde os dados brutos 
+coletados pelos crawlers são armazenados (economia_raw e governo_raw). Posteriormente, 
+o dbt utiliza DuckDB para transformar esses dados brutos em tabelas estruturadas 
+(economia_transformed e governo_transformed). DuckDB oferece a agilidade e eficiência 
+necessárias para processar grandes volumes de dados rapidamente, facilitando as etapas de transformação e análise subsequentes.
+
+
+2. dbt (Data Build Tool)
+O que é dbt?
+dbt é uma ferramenta de transformação de dados que permite aos engenheiros de dados transformar dados brutos em dados analisáveis de forma eficiente e modular. Ele se baseia em SQL e oferece funcionalidades avançadas como versionamento de código, testes de qualidade de dados e documentação automatizada.
+
+Principais Características:
+Transformações em SQL: Facilita a escrita de transformações de dados utilizando SQL, uma linguagem amplamente conhecida.
+Modularidade: Permite organizar transformações em modelos reutilizáveis e dependentes.
+Testes de Qualidade de Dados: Inclui funcionalidades para validar a integridade dos dados através de testes automatizados.
+Documentação: Gera documentação automatizada dos modelos e fontes de dados.
+Integração com Versionamento: Funciona bem com sistemas de controle de versão como Git, facilitando o gerenciamento de mudanças.
+Por Que Usar dbt no Seu Projeto?
+No seu pipeline de dados, o dbt é responsável por transformar os dados brutos armazenados no DuckDB 
+em tabelas estruturadas e prontas para análise ou para serem utilizadas em modelos de Machine Learning 
+(economia_transformed e governo_transformed). O dbt facilita a aplicação de boas práticas de engenharia 
+de dados, garantindo que as transformações sejam consistentes, auditáveis e facilmente mantidas.
+
+
+3. Dagster
+O que é Dagster?
+Dagster é uma plataforma de orquestração de pipelines de dados que facilita a criação, teste e monitoramento 
+de fluxos de trabalho de dados. Ele fornece uma interface robusta para definir e gerenciar a execução 
+de diferentes etapas do pipeline, garantindo que cada componente funcione em harmonia.
+
+Principais Características:
+Definição de Pipelines como Código: Permite definir pipelines usando Python, oferecendo flexibilidade e controle.
+Gerenciamento de Dependências: Facilita a definição de dependências entre diferentes etapas do pipeline, garantindo a execução na ordem correta.
+Monitoramento e Logs: Fornece ferramentas integradas para monitorar a execução do pipeline e revisar logs detalhados.
+Modularidade e Reutilização: Permite a criação de componentes reutilizáveis, promovendo a consistência e eficiência no desenvolvimento.
+Suporte a Diversas Ferramentas: Integra-se facilmente com diferentes ferramentas e tecnologias de dados, incluindo dbt e DuckDB.
+Por Que Usar Dagster no Seu Projeto?
+Dagster atua como o orquestrador do seu pipeline de dados, coordenando as várias etapas desde a coleta 
+de dados pelos crawlers, armazenamento no DuckDB, transformação com dbt, até o processamento e treinamento 
+de modelos de Machine Learning. Ele garante que cada etapa seja executada na ordem correta, gerencia falhas 
+e fornece visibilidade completa sobre o estado do pipeline através de seus recursos de monitoramento e logging.
+
+
+4. Integração Entre DuckDB, dbt e Dagster no Seu Projeto
+Visão Geral do Pipeline:
+Coleta de Dados (Crawlers): Utiliza spiders do Scrapy para coletar notícias de economia e governo, salvando os dados brutos (economia_raw e governo_raw) no DuckDB.
+Transformação de Dados (dbt): O dbt transforma os dados brutos em tabelas estruturadas (economia_transformed e governo_transformed), aplicando regras de negócios e limpeza de dados.
+Processamento e Análise (Dagster): Dagster coordena a execução dos crawlers, dbt e outras etapas de processamento, como análise de sentimento e treinamento de modelos de IA.
+Verificação e Validação: Utiliza assets do Dagster para verificar e validar os dados transformados, garantindo a qualidade e integridade antes de prosseguir para etapas subsequentes.
+Fluxo de Trabalho Detalhado:
+Execução dos Crawlers:
+Assets: crawler_economia e crawler_governo.
+Ação: Executam spiders do Scrapy para coletar dados e armazenam os resultados brutos no DuckDB.
+Transformação com dbt:
+Asset: executar_dbt.
+Ação: Executa os modelos dbt (economia_transformed e governo_transformed) que transformam os dados brutos em tabelas estruturadas.
+Tratamento de Dados:
+Assets: tratar_dados_economia e tratar_dados_governo.
+Ação: Aplicam análises adicionais, como análise de sentimento, e preparam os dados para serem utilizados em modelos de Machine Learning.
+Treinamento de Modelos de IA:
+Assets: treinar_ia_economia e treinar_ia_governo.
+Ação: Treinam modelos de Machine Learning com os dados processados, avaliando a acurácia e performance.
+Verificação de Dados Transformados:
+Asset: verificar_dados_transformados.
+Ação: Inspeciona e imprime amostras dos dados transformados para garantir que tudo está conforme o esperado.
+Diagrama Simplificado do Pipeline:
+scss
+Copiar código
+Crawlers (crawler_economia & crawler_governo)
+          |
+          v
+      DuckDB (economia_raw & governo_raw)
+          |
+          v
+        dbt (executar_dbt)
+          |
+          v
+DuckDB (economia_transformed & governo_transformed)
+          |
+          v
+ Tratamento de Dados (tratar_dados_economia & tratar_dados_governo)
+          |
+          v
+DuckDB (economia_processed & governo_processed)
+          |
+          v
+   Treinamento de IA (treinar_ia_economia & treinar_ia_governo)
+          |
+          v
+Verificação de Dados (verificar_dados_transformados)
+
+
+5. Avaliação da Configuração do Projeto
+Conformidade e Correção:
+Com base nas etapas que você seguiu e nos logs fornecidos, parece que a configuração do seu projeto está majoritariamente correta. Aqui estão os pontos-chave que indicam uma configuração bem-sucedida:
+
+DuckDB Configurado Corretamente:
+
+O perfil do dbt está apontando para o arquivo DuckDB correto.
+As tabelas brutas (economia_raw e governo_raw) estão sendo criadas e populadas corretamente.
+dbt Integrado com DuckDB:
+
+Os modelos dbt (economia_transformed e governo_transformed) estão sendo executados sem erros, indicando que as transformações estão alinhadas com a estrutura das tabelas brutas.
+Os testes do dbt (not_null e unique) estão passando, garantindo a integridade dos dados.
+Dagster Orquestrando o Pipeline:
+
+Os assets do Dagster estão sendo executados na ordem correta, respeitando as dependências definidas.
+As etapas de transformação e processamento estão sendo coordenadas adequadamente.
+Tratamento Adequado de Erros:
+
+O erro inicial relacionado à comparação de NoneType foi resolvido ao preencher valores None com 0, garantindo que as classificações de sentimento funcionem sem interrupções.
+Possíveis Melhorias e Recomendações:
+Apesar da configuração estar correta, há sempre espaço para melhorias e otimizações:
+
+Automatização de Testes:
+Adicione mais testes no dbt para validar diferentes aspectos dos dados, como valores esperados, relacionamentos entre tabelas e padrões de dados.
+Documentação Detalhada:
+Utilize a capacidade de documentação do dbt para criar documentação detalhada dos modelos e fontes, facilitando a compreensão e manutenção do pipeline.
+Monitoramento e Alertas:
+Implemente sistemas de monitoramento e alertas no Dagster para ser notificado automaticamente em caso de falhas ou comportamentos inesperados no pipeline.
+Escalabilidade:
+Embora DuckDB seja ótimo para análises rápidas e embutidas, considere a escalabilidade futura do projeto. Se os volumes de dados aumentarem significativamente, pode ser necessário migrar para um data warehouse mais robusto, como PostgreSQL ou BigQuery.
+Gerenciamento de Dependências:
+Utilize arquivos de lock (requirements.txt ou Pipfile.lock) para garantir que todas as dependências sejam gerenciadas de forma consistente em diferentes ambientes.
+Versionamento de Modelos e Pipelines:
+Utilize Git para versionar os modelos dbt e as definições de pipelines no Dagster, facilitando o rastreamento de mudanças e a colaboração com outros desenvolvedores.
+6. Conclusão
+Você configurou com sucesso um pipeline de dados integrado utilizando DuckDB, dbt e Dagster, que coleta, armazena, transforma e processa dados de forma eficiente. A estrutura do seu projeto está bem organizada, com as ferramentas interagindo harmoniosamente para garantir a qualidade e integridade dos dados.
+
+Resumo dos Componentes:
+
+DuckDB: Atua como o data warehouse embutido para armazenamento e consulta rápida de dados brutos e transformados.
+dbt: Gerencia as transformações de dados, garantindo que as tabelas resultantes estejam estruturadas e validadas conforme os requisitos.
+Dagster: Orquestra todas as etapas do pipeline, garantindo que cada componente seja executado na ordem correta e gerenciando dependências e erros de forma eficiente.
+Próximos Passos:
+
+Expandir o Pipeline: Adicionar mais etapas de transformação ou análise conforme necessário.
+Implementar Monitoramento Avançado: Utilizar ferramentas de monitoramento para obter insights em tempo real sobre a execução do pipeline.
+Documentar e Versionar: Manter uma documentação detalhada e utilizar controle de versão para facilitar a manutenção e escalabilidade do projeto.
+Automatizar Deployments: Configurar pipelines de CI/CD para automatizar a implantação e atualização das ferramentas e modelos.
+Caso você tenha mais perguntas ou precise de assistência adicional em qualquer uma das etapas, sinta-se à vontade para perguntar!
+
+
+Claro! Vamos detalhar cada uma das tecnologias envolvidas no seu projeto, entender suas funções individuais e como elas interagem para formar um pipeline eficiente de ETL (Extração, Transformação e Carga), data warehousing, ciência de dados, engenharia de dados e crawling. A seguir, apresento uma visão abrangente de Dagster, DBT, DuckDB, MongoDB e Scrapy, além de como elas se comunicam e contribuem para o seu projeto.
+
+1. Visão Geral das Tecnologias
+1.1. Dagster
+Dagster é uma plataforma de orquestração de pipelines de dados. Ele permite que você defina, execute e monitore pipelines de dados complexos de forma modular e escalável.
+
+Principais Funcionalidades:
+Definição de Assets: Componentes individuais que representam partes do pipeline.
+Orquestração: Coordena a execução dos assets em uma ordem específica.
+Monitoramento: Fornece visibilidade sobre a execução dos pipelines através do Dagit (interface web).
+Gerenciamento de Recursos: Facilita a integração com sistemas externos (bancos de dados, APIs, etc.) por meio de recursos configuráveis.
+1.2. DBT (Data Build Tool)
+DBT é uma ferramenta de transformação de dados que permite aos engenheiros de dados transformar dados brutos em modelos analíticos utilizando SQL. Ele se concentra na transformação de dados dentro do data warehouse.
+
+Principais Funcionalidades:
+Transformações SQL: Define modelos de dados usando SQL puro.
+Versionamento e Documentação: Integração com sistemas de controle de versão e geração automática de documentação.
+Testes de Dados: Validação de qualidade dos dados através de testes automatizados.
+Orquestração Simples: Embora DBT possa ser executado standalone, ele é frequentemente integrado com ferramentas de orquestração como Dagster para pipelines mais complexos.
+1.3. DuckDB
+DuckDB é um banco de dados analítico embutido, semelhante ao SQLite, mas otimizado para processamento de consultas analíticas rápidas em grandes volumes de dados.
+
+Principais Funcionalidades:
+Banco de Dados Embutido: Não requer um servidor separado; funciona diretamente com arquivos locais.
+Performance Analítica: Otimizado para consultas rápidas e processamento eficiente de dados analíticos.
+Compatibilidade com SQL: Suporta a maioria das funcionalidades do SQL padrão.
+1.4. MongoDB
+MongoDB é um banco de dados NoSQL orientado a documentos que armazena dados em formato JSON-like (BSON), permitindo flexibilidade e escalabilidade.
+
+Principais Funcionalidades:
+Modelo de Documento: Armazena dados em documentos flexíveis, facilitando a representação de dados hierárquicos.
+Escalabilidade Horizontal: Suporta distribuição de dados em múltiplos servidores.
+Consultas Poderosas: Oferece uma linguagem de consulta rica e índices flexíveis.
+1.5. Scrapy
+Scrapy é um framework de crawling e scraping para Python, utilizado para extrair dados de websites de forma estruturada.
+
+Principais Funcionalidades:
+Crawlers Personalizados: Permite definir spiders para navegar e extrair dados de sites específicos.
+Pipeline de Processamento: Facilita o processamento e armazenamento dos dados extraídos.
+Extensibilidade: Suporta middleware e extensões para funcionalidades adicionais.
+2. Como as Tecnologias se Integraram no Seu Projeto
+Vamos analisar como cada uma dessas tecnologias se encaixa no seu projeto, considerando um fluxo de trabalho típico de ETL para coleta, transformação e análise de dados.
+
+2.1. Fluxo Geral do Pipeline
+Extração (Crawling): Utiliza-se Scrapy para coletar dados de websites.
+Armazenamento Bruto: Os dados extraídos são salvos no DuckDB para armazenamento inicial e também no MongoDB para acesso flexível.
+Transformação: Utiliza-se DBT para transformar os dados brutos armazenados no DuckDB em modelos analíticos.
+Orquestração: Dagster gerencia todo o pipeline, coordenando a execução dos diferentes componentes e assegurando que cada etapa seja executada na ordem correta.
+Análise e Ciência de Dados: Após a transformação, os dados podem ser utilizados para treinamento de modelos de machine learning ou análises mais aprofundadas.
+2.2. Detalhamento das Etapas
+2.2.1. Extração de Dados com Scrapy
+Função: Coletar dados de fontes externas (sites de economia e governo) através de spiders personalizados.
+Como Funciona:
+Spiders: Classes que definem como navegar e extrair dados de sites específicos.
+Crawlers: Executam os spiders para coletar dados.
+Output: Dados extraídos são salvos em arquivos JSON e inseridos no DuckDB e no MongoDB.
+2.2.2. Armazenamento de Dados Brutos no DuckDB e MongoDB
+DuckDB:
+Uso: Armazena os dados extraídos de forma estruturada para facilitar transformações e consultas analíticas.
+Vantagem: Alta performance para consultas analíticas sem a necessidade de um servidor separado.
+MongoDB:
+Uso: Armazena os dados extraídos de forma flexível, permitindo consultas rápidas e armazenamento de dados semi-estruturados.
+Vantagem: Flexibilidade no esquema, facilitando inserções de dados variados e acesso rápido através de consultas.
+2.2.3. Transformação de Dados com DBT
+Função: Transformar os dados brutos armazenados no DuckDB em modelos analíticos prontos para análise e treinamento de modelos de machine learning.
+Como Funciona:
+Modelos DBT: Scripts SQL que definem transformações, como limpeza de dados, agregações, junções e criação de tabelas derivadas.
+Execução: Os modelos são executados para transformar os dados no DuckDB.
+Integração com Dagster:
+Asset DBT: O asset executar_dbt no Dagster orquestra a execução dos modelos DBT, garantindo que a transformação ocorra após a extração dos dados.
+2.2.4. Orquestração com Dagster
+Função: Gerenciar e coordenar a execução das diferentes etapas do pipeline (crawling, transformação, treinamento de IA).
+Como Funciona:
+Assets: Componentes individuais que representam etapas do pipeline, como crawler_economia, executar_dbt, tratar_dados_economia, etc.
+Jobs e Schedules: Define a ordem e a periodicidade de execução dos assets.
+Recursos: Gerencia conexões externas, como o recurso mongo para acesso ao MongoDB.
+2.2.5. Análise e Treinamento de Modelos de IA
+Função: Realizar análises de sentimento e treinar modelos de machine learning para classificar notícias.
+Como Funciona:
+Análise de Sentimento: Utiliza-se a biblioteca vaderSentiment para atribuir pontuações de sentimento às notícias.
+Treinamento de Modelos: Utiliza-se algoritmos como Random Forest, Logistic Regression e SVM para treinar modelos de classificação baseados no sentimento.
+Armazenamento de Métricas: Métricas de desempenho dos modelos são salvas no DuckDB, no MongoDB e em arquivos de relatório.
+3. Comunicação Entre as Tecnologias no Projeto
+Vamos ilustrar como as tecnologias interagem dentro do pipeline do seu projeto:
+
+Scrapy → DuckDB e MongoDB:
+
+Scrapy executa spiders (NoticiasSpider e G1Spider) para coletar dados.
+Os dados coletados são salvos em arquivos JSON e inseridos no DuckDB para armazenamento estruturado e no MongoDB para armazenamento flexível.
+DuckDB → DBT:
+
+DBT acessa os dados brutos no DuckDB para realizar transformações.
+Os modelos DBT definem como os dados são limpos, agregados e transformados em tabelas analíticas no DuckDB.
+DBT → Dagster:
+
+Dagster orquestra a execução dos modelos DBT através do asset executar_dbt, garantindo que as transformações ocorram após a extração de dados.
+DuckDB → Ciência de Dados:
+
+Após a transformação, os dados transformados no DuckDB são utilizados para análises de sentimento e treinamento de modelos de IA.
+Os resultados (métricas, matrizes de confusão, relatórios) são salvos no DuckDB, no MongoDB e em arquivos locais.
+Dagster Gerencia Todo o Pipeline:
+
+Dagster coordena todas as etapas, garantindo que a extração, transformação e análise ocorram na ordem correta e de forma eficiente.
+Ele também gerencia os recursos, como a conexão com o MongoDB, assegurando que cada asset tenha acesso aos recursos necessários.
+4. Papel de Cada Tecnologia no Contexto do Projeto
+4.1. Scrapy (Crawling)
+Função: Extração de dados de fontes externas (sites de economia e governo).
+Responsabilidade: Coletar notícias e informações relevantes, transformando-as em formatos estruturados para armazenamento.
+4.2. DuckDB (Data Warehouse e Armazenamento Analítico)
+Função: Armazenamento estruturado dos dados extraídos e transformados.
+Responsabilidade: Servir como um data warehouse embutido para consultas analíticas rápidas e armazenamento intermediário para transformações.
+4.3. DBT (Transformação de Dados)
+Função: Transformação dos dados brutos em modelos analíticos.
+Responsabilidade: Limpar, organizar e estruturar os dados no DuckDB para facilitar análises posteriores e treinamento de modelos de IA.
+4.4. MongoDB (Armazenamento Flexível e Acesso Rápido)
+Função: Armazenamento flexível de dados brutos e processados.
+Responsabilidade: Facilitar o acesso rápido e flexível aos dados para análises ad-hoc, visualizações e integração com outras aplicações.
+4.5. Dagster (Orquestração e Gerenciamento de Pipelines)
+Função: Coordenar a execução das diferentes etapas do pipeline.
+Responsabilidade: Garantir que cada etapa (crawling, transformação, análise) seja executada na ordem correta, monitorar o progresso e lidar com falhas.
+4.6. Ciência de Dados e Machine Learning
+Função: Análise de sentimento e treinamento de modelos de classificação.
+Responsabilidade: Transformar os dados transformados em insights acionáveis e modelos preditivos que podem ser utilizados para tomar decisões informadas.
+5. Processo ETL no Seu Projeto
+Vamos detalhar como o processo ETL (Extração, Transformação e Carga) é implementado no seu projeto usando as tecnologias mencionadas.
+
+5.1. Extração
+Ferramenta: Scrapy
+Atividades:
+Definição de Spiders: Criação de spiders personalizados para coletar dados de sites específicos.
+Execução dos Spiders: Coleta de dados e salvamento em formatos estruturados (JSON).
+Armazenamento Inicial: Inserção dos dados no DuckDB e no MongoDB.
+5.2. Transformação
+Ferramenta: DBT
+Atividades:
+Definição de Modelos: Criação de scripts SQL que definem como os dados brutos serão transformados em modelos analíticos.
+Execução das Transformações: Rodar os modelos DBT para limpar, agregar e estruturar os dados no DuckDB.
+Validação de Dados: Utilização de testes DBT para assegurar a qualidade e integridade dos dados transformados.
+5.3. Carga
+Ferramenta: MongoDB e DuckDB
+Atividades:
+Carga de Dados Transformados: Inserção dos dados transformados de volta no DuckDB para análises posteriores e no MongoDB para acesso rápido.
+Armazenamento de Métricas e Relatórios: Salvar as métricas de desempenho dos modelos de IA no DuckDB, no MongoDB e em arquivos locais para referência futura.
+6. Data Warehouse e Engenharia de Dados
+6.1. DuckDB como Data Warehouse
+Papel: Servir como um data warehouse embutido para armazenar dados brutos e transformados.
+Benefícios:
+Performance Rápida: Consultas analíticas rápidas sem a necessidade de um servidor separado.
+Simplicidade: Fácil de configurar e usar dentro do seu pipeline existente.
+6.2. Engenharia de Dados com Dagster e DBT
+Papel: Gerenciar e automatizar o fluxo de dados através do pipeline ETL.
+Benefícios:
+Modularidade: Cada etapa do pipeline é definida como um asset, facilitando a manutenção e a escalabilidade.
+Orquestração: Garantir que as transformações ocorram após a extração e antes da análise, mantendo a integridade do fluxo de dados.
+7. Integração e Comunicação Entre as Tecnologias
+Vamos visualizar como as tecnologias se comunicam dentro do pipeline:
+
+Dagster (Orquestração)
+
+Executa: Assets na ordem definida (crawling, transformação, análise).
+Gerencia: Recursos externos como MongoDB através do recurso mongo.
+Scrapy (Crawling)
+
+Coleta Dados: Executa spiders para coletar dados de sites de economia e governo.
+Salva Dados: Insere dados no DuckDB para armazenamento estruturado e no MongoDB para acesso flexível.
+DuckDB (Data Warehouse)
+
+Armazena Dados Brutos: Recebe dados extraídos pelo Scrapy.
+Transforma Dados com DBT: DBT acessa o DuckDB para realizar transformações definidas nos modelos DBT.
+Armazena Dados Transformados: Salva os dados transformados para uso posterior.
+DBT (Transformação)
+
+Acessa DuckDB: Executa modelos de transformação nos dados brutos.
+Produz Modelos Analíticos: Gera tabelas transformadas no DuckDB.
+Ciência de Dados e Machine Learning
+
+Analisa Dados Transformados: Carrega dados do DuckDB para análise de sentimento e treinamento de modelos.
+Salva Resultados: Insere métricas no MongoDB e gera relatórios.
+MongoDB (Armazenamento Flexível)
+
+Recebe Dados Brutos e Transformados: Armazena cópias dos dados para acesso rápido.
+Salva Métricas: Armazena métricas de modelos de IA para consulta e análise.
+8. Benefícios da Arquitetura Utilizada
+8.1. Modularidade e Escalabilidade
+Dagster: Permite a definição clara e modular de cada etapa do pipeline, facilitando a manutenção e escalabilidade.
+DBT: Facilita a manutenção das transformações de dados com scripts SQL organizados e versionados.
+8.2. Performance e Eficiência
+DuckDB: Proporciona alta performance para consultas analíticas sem a necessidade de infraestruturas complexas.
+MongoDB: Oferece flexibilidade no armazenamento e acesso rápido aos dados semi-estruturados.
+8.3. Flexibilidade e Controle
+Scrapy: Permite a coleta personalizada de dados de múltiplas fontes.
+Dagster: Oferece controle total sobre o fluxo de execução e gerenciamento de falhas.
+8.4. Visibilidade e Monitoramento
+Dagit (Interface do Dagster): Fornece uma interface visual para monitorar a execução dos pipelines, verificar logs e diagnosticar problemas.
+9. Considerações Finais e Próximos Passos
+9.1. Garantir Conectividade com MongoDB
+Revisão das Configurações:
+
+Verifique se a variável MONGO_URI está corretamente definida no seu arquivo .env.
+Assegure-se de que o usuário do MongoDB possui permissões adequadas para inserir dados nas coleções especificadas.
+Teste de Conexão:
+
+Utilize o script de teste de conexão que forneci anteriormente (test_mongo_connection.py) para validar a conectividade e permissões.
+9.2. Verificação e Depuração dos Assets
+Logs do Dagit:
+
+Utilize a interface do Dagit para monitorar a execução dos assets e identificar possíveis erros durante a inserção no MongoDB ou geração de métricas.
+Print Statements:
+
+Mantenha os print statements no código para fornecer feedback imediato durante a execução, ajudando na identificação de pontos de falha.
+9.3. Validação dos Resultados
+Verificação no MongoDB:
+
+Acesse o MongoDB através de uma interface gráfica como o MongoDB Compass ou via linha de comando para confirmar se os dados estão sendo inseridos corretamente.
+Verificação dos Arquivos de Relatório:
+
+Navegue até o diretório projeto_dados/resultados para garantir que os arquivos CSV e TXT estão sendo gerados conforme esperado.
+9.4. Continuidade e Melhoria
+Automatização e Schedules:
+
+Defina schedules no Dagster para executar o pipeline automaticamente em intervalos regulares, garantindo dados atualizados continuamente.
+Escalabilidade:
+
+Conforme o volume de dados aumenta, considere otimizações no armazenamento (por exemplo, particionamento no DuckDB) e na execução dos assets.
+Monitoramento Avançado:
+
+Integre ferramentas de monitoramento adicionais para acompanhar a performance e a saúde do pipeline.
+10. Diagrama Conceitual do Pipeline
+Embora não possamos criar um diagrama visual aqui, descreveremos como as tecnologias se conectam:
+
+css
+Copiar código
+[Scrapy Spiders] --> [DuckDB (Raw Data)]
+                     \
+                      --> [MongoDB (Raw Data)]
+
+[Dagster] --> [DBT (Transformations)] --> [DuckDB (Transformed Data)]
+
+[Dagster] --> [Analysis & ML] --> [DuckDB (Metrics)]
+                                 \
+                                  --> [MongoDB (Metrics)]
+                                  \
+                                   --> [Result Files (CSV, TXT)]
+Descrição do Diagrama:
+Scrapy Spiders: Coletam dados e os inserem tanto no DuckDB quanto no MongoDB.
+Dagster: Orquestra a execução dos assets, garantindo que a transformação com DBT ocorra após a extração.
+DBT: Transforma os dados brutos no DuckDB.
+Análise e ML: Utiliza os dados transformados para análises de sentimento e treinamento de modelos, salvando métricas no DuckDB, no MongoDB e em arquivos locais.
+11. Recursos Adicionais
+Documentação do Dagster: https://docs.dagster.io/
+Documentação do DBT: https://docs.getdbt.com/
+Documentação do DuckDB: https://duckdb.org/docs/
+Documentação do MongoDB: https://docs.mongodb.com/
+Documentação do Scrapy: https://docs.scrapy.org/
+Conclusão
+Integrar Dagster, DBT, DuckDB, MongoDB e Scrapy cria um pipeline robusto e eficiente para coleta, transformação, armazenamento e análise de dados. Cada tecnologia desempenha um papel específico, contribuindo para a modularidade, performance e escalabilidade do seu projeto. Ao garantir que todas as configurações estão corretas e que as conexões entre os componentes estão funcionando, você pode criar um fluxo de trabalho de dados confiável e facilmente gerenciável.
+
+Caso ainda enfrente problemas específicos, como a inserção de dados no MongoDB ou a geração de métricas, revise cuidadosamente as configurações, verifique os logs de execução no Dagit e utilize ferramentas de teste para isolar e resolver os problemas.
+
+Se precisar de mais assistência ou tiver outras dúvidas, sinta-se à vontade para perguntar!
+
+
 '''# assets.py
 import os
 import json
@@ -410,7 +825,7 @@ def verificar_dados_disponiveis() -> None:
     print(f"Dados disponíveis para Economia: {economia_df.shape[0]} registros.")
     print(f"Dados disponíveis para Governo: {governo_df.shape[0]} registros.")'''
 
-''''
+'''
 import os
 import json
 import pandas as pd
@@ -638,7 +1053,7 @@ def verificar_dados_transformados() -> None:
 
     conn.close()'''
     
-'''
+'''    
 import os
 import json
 import pandas as pd
@@ -927,8 +1342,8 @@ def verificar_dados_transformados() -> None:
     
 # assets.py
 
-# assets.py
-'''
+'''# assets.py
+
 import os
 import json
 import pandas as pd
@@ -1342,7 +1757,7 @@ def verificar_dados_disponiveis() -> None:
     
     
 # assets.py
-'''
+
 import os
 import json
 import pandas as pd
@@ -1760,7 +2175,7 @@ def verificar_dados_disponiveis() -> None:
     print(f"Dados disponíveis para Economia: {economia_df.shape[0]} registros.")
     print(f"Dados disponíveis para Governo: {governo_df.shape[0]} registros.")
 
-'''
+
 '''
 import os
 import json
@@ -2178,1937 +2593,3 @@ def verificar_dados_disponiveis() -> None:
     
     print(f"Dados disponíveis para Economia: {economia_df.shape[0]} registros.")
     print(f"Dados disponíveis para Governo: {governo_df.shape[0]} registros.")'''
-
-'''
-import os
-import json
-import pandas as pd
-from datetime import datetime
-
-# dagster: Framework de orquestração de dados
-from dagster import asset, AssetIn
-
-# scrapy: Para coleta de dados da web (crawlers)
-from scrapy.crawler import CrawlerProcess
-
-# Import dos spiders customizados para economia e governo
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider
-
-# duckdb: Banco de dados colunar em um único arquivo, rápido e eficiente
-import duckdb
-
-# vaderSentiment: Análise de sentimento pré-treinada baseada em léxicos
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
-# sklearn: Biblioteca de Machine Learning para treinamento de modelos simples
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-
-# filelock: Evita acesso concorrente problemático ao arquivo DuckDB
-from filelock import FileLock
-
-import hashlib
-import subprocess
-
-# Importar função do MongoDB
-from db_mongo.conexao_mongo import salvar_no_mongo
-
-# ---------------------------------------------
-# Configurações de diretórios e arquivos
-# ---------------------------------------------
-
-# BASE_DIR: Diretório base do projeto
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# RESULTADOS_DIR: Onde resultados (métricas, relatórios) serão armazenados
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
-os.makedirs(RESULTADOS_DIR, exist_ok=True)
-
-# DUCKDB_FILE: Arquivo único do DuckDB para persistência local de dados
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
-
-# DBT_PROJECT_PATH: Diretório do projeto DBT
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
-
-# Lock para evitar concorrência ao acessar DuckDB
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
-
-# ---------------------------------------------
-# Funções auxiliares
-# ---------------------------------------------
-
-def run_spider(spider, raw_table_name, collection_name, logger):
-    """
-    Executa um spider do Scrapy, salva os dados brutos em JSON, carrega em DuckDB e MongoDB.
-    
-    - SRP: Esta função tem a única responsabilidade de rodar o spider, extrair dados e persistir.
-    - OCP: Podemos adicionar novos spiders sem alterar esta função, apenas passando novos parâmetros.
-    - Clean Code: Nome claro (run_spider), parâmetros descritivos.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    # CrawlerProcess: executa o spider sem precisar de comando no terminal
-    process = CrawlerProcess(settings={
-        "FEEDS": {output_file: {"format": "json"}},
-        "FEED_EXPORT_ENCODING": "utf-8",
-    })
-    process.crawl(spider)
-    process.start()
-
-    # Carrega dados do JSON gerado pelo spider
-    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
-        data = json.load(f)
-    
-    # Processamento dos dados brutos para uma estrutura tabular padronizada
-    processed_data = []
-    if raw_table_name == "economia_raw":
-        # Para economia, o spider retorna um dict com time_key e lista de títulos
-        for item in data:
-            for time_key, titles in item.items():
-                for title in titles:
-                    processed_data.append({
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
-                        "titulo_noticia": title,
-                        "texto": "",  # Aqui poderia estar o texto completo se disponível
-                        "data_publicacao": None,
-                        "time_ago": time_key,
-                    })
-    elif raw_table_name == "governo_raw":
-        # Para governo, o spider retorna dicionários com campos específicos
-        for item in data:
-            processed_data.append({
-                "id": hashlib.md5(str(item).encode()).hexdigest(),
-                "titulo_noticia": item.get("title", ""),
-                "texto": item.get("body", ""),
-                "data_publicacao": item.get("data_publicacao", ""),
-            })
-
-    df = pd.DataFrame(processed_data)
-    
-    if 'id' not in df.columns:
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
-
-    if 'data_publicacao' not in df.columns:
-        df['data_publicacao'] = pd.NaT
-
-    # Acesso ao DuckDB protegido por lock (Thread-Safety)
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        try:
-            count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0] # type: ignore
-        except duckdb.BinderException:
-            count = 0
-
-        if count > 0:
-            # Inserção apenas de novos registros não duplicados
-            conn.execute(f"""
-                INSERT INTO {raw_table_name} 
-                SELECT * FROM df_view 
-                WHERE id NOT IN (SELECT id FROM {raw_table_name})
-            """)
-            logger.info(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
-        else:
-            # Cria tabela caso ainda não exista
-            conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
-            logger.info(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.")
-        conn.close()
-
-    logger.info(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
-
-    # Salvar dados no MongoDB
-    salvar_no_mongo(processed_data, collection_name)
-    logger.info(f"Novos dados adicionados à coleção '{collection_name}' no MongoDB.")
-
-def carregar_dados_duckdb(table_name, logger):
-    """
-    Carrega dados de uma tabela DuckDB em um DataFrame.
-    - SRP: Apenas carregar dados.
-    - Clean Code: Nome simples e descritivo.
-    """
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        try:
-            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-            logger.info(f"Dados carregados da tabela '{table_name}' no DuckDB.")
-        except duckdb.BinderException:
-            logger.error(f"Tabela {table_name} não encontrada no DuckDB.")
-            df = pd.DataFrame()
-        conn.close()
-    return df
-
-def tratar_dados_func(transformed_table, processed_table, resultados_dir, collection_name, logger):
-    """
-    Trata dados transformados (após DBT), realiza análise de sentimento e prepara dados para IA.
-    
-    - SOLID (SRP): Uma única função para tratar dados (responsabilidade clara).
-    - Caso precisemos mudar a forma de análise de sentimento, podemos injetar outra estratégia (Strategy Pattern).
-    """
-    df = carregar_dados_duckdb(transformed_table, logger)
-    if df.empty:
-        logger.warning(f"Nenhum dado encontrado na tabela {transformed_table}.")
-        return pd.DataFrame()
-
-    analyzer = SentimentIntensityAnalyzer()
-    df['texto_para_sentimento'] = df.apply(
-        lambda row: row['texto'] if isinstance(row['texto'], str) and row['texto'].strip() else row['titulo_noticia'],
-        axis=1
-    )
-    df['sentimento'] = df['texto_para_sentimento'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else 0)
-    df['sentimento'] = df['sentimento'].fillna(0)
-    
-    # Classificação de acordo com VADER
-    df['sentimento_classificacao'] = df['sentimento'].apply(
-        lambda x: 'positivo' if x >= 0.05 else ('negativo' if x <= -0.05 else 'neutro')
-    )
-    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
-
-    # Salvar resumo de sentimento
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    logger.info(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    # Salvar dados processados no MongoDB
-    salvar_no_mongo(df.to_dict(orient='records'), f"{collection_name}_processed")
-    logger.info(f"Dados processados salvos na coleção '{collection_name}_processed' no MongoDB.")
-
-    # Verificar se temos classes suficientes
-    contagem_targets = df['target'].value_counts()
-    if contagem_targets.shape[0] < 2:
-        logger.warning(f"Não há classes suficientes para treinar IA em {transformed_table}.")
-        return df
-
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-        conn.close()
-
-    logger.info(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
-    return df
-
-def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str, logger):
-    """
-    Treina modelos de IA (RandomForest, LogisticRegression, SVM) e salva métricas e relatórios.
-    
-    - SOLID (SRP): Função dedicada ao treinamento e avaliação de modelos.
-    - Podemos usar o Strategy Pattern caso queiramos trocar o algoritmo de IA facilmente.
-    """
-    if df.empty:
-        logger.warning(f"Nenhum dado disponível para treinamento em {nome_modelo}.")
-        return
-    
-    X = df[['sentimento']].fillna(0)
-    y = df['target']
-    if y.nunique() <= 1:
-        logger.warning(f"Dados insuficientes para treinar IA em {nome_modelo}.")
-        return
-
-    try:
-        # Estratificação garante distribuição semelhante de classes no train/test
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-    except ValueError as e:
-        logger.error(f"Erro ao dividir os dados para {nome_modelo}: {e}")
-        return
-
-    if y_train.nunique() < 2 or y_test.nunique() < 2:
-        logger.warning(f"Dados insuficientes para treinar IA em {nome_modelo} após divisão.")
-        return
-
-    # Três modelos simples para demonstrar múltiplas abordagens
-    algoritmos = {
-        "RandomForest": RandomForestClassifier(random_state=42),
-        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
-        "SVM": SVC(random_state=42)
-    }
-    
-    metrics_list = []
-
-    for nome_algoritmo, modelo in algoritmos.items():
-        try:
-            modelo.fit(X_train, y_train)
-            y_pred = modelo.predict(X_test)
-
-            acuracia = accuracy_score(y_test, y_pred)
-            precisao = precision_score(y_test, y_pred, zero_division=0)
-            recall_val = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
-            
-            metrics_list.append({
-                "Algoritmo": nome_algoritmo,
-                "Acurácia": acuracia,
-                "Precisão": precisao,
-                "Recall": recall_val,
-                "F1-Score": f1
-            })
-            
-            cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
-            cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
-            cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
-            cm_df.to_csv(cm_file)
-            logger.info(f"Matriz de Confusão para {nome_algoritmo} salva em '{cm_file}'.")
-        except ValueError as e:
-            logger.error(f"Erro ao treinar {nome_algoritmo} em {nome_modelo}: {e}")
-            continue
-
-    if metrics_list:
-        metrics_df = pd.DataFrame(metrics_list)
-    else:
-        metrics_df = pd.DataFrame(columns=["Algoritmo", "Acurácia", "Precisão", "Recall", "F1-Score"])
-        logger.warning(f"Nenhuma métrica foi coletada para {nome_modelo}.")
-
-    if not metrics_df.empty:
-        metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
-        metrics_df.to_csv(metrics_file, index=False)
-        logger.info(f"Métricas dos modelos salvas em '{metrics_file}'.")
-    else:
-        logger.warning(f"Nenhuma métrica foi salva para {nome_modelo}.")
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    logger.info(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    if not metrics_df.empty:
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\n\nMétricas dos Modelos:\n")
-            relatorio.write(metrics_df.to_string(index=False))
-            relatorio.write("\n\nObservações:\n")
-            relatorio.write("A IA está analisando o sentimento das notícias com base na pontuação de sentimento fornecida pelo VADER.\n")
-            relatorio.write("Classes utilizadas: Positivo (1), Negativo (0)\n")
-        
-        logger.info(f"Relatório detalhado salvo em '{relatorio_path}'.")
-    else:
-        logger.warning(f"Nenhum relatório foi gerado para {nome_modelo}.")
-
-# ---------------------------------------------
-# Definição de Assets do Dagster
-# ---------------------------------------------
-
-@asset(
-    description="Executa o crawler para coletar notícias de economia e salva os dados brutos no DuckDB e MongoDB.",
-    kinds={"python"},
-)
-def crawler_economia(context) -> None:
-    run_spider(NoticiasSpider, "economia_raw", "economia_raw", context.log)
-
-@asset(
-    description="Executa o crawler para coletar notícias de governo e salva os dados brutos no DuckDB e MongoDB.",
-    kinds={"python"},
-)
-def crawler_governo(context) -> None:
-    run_spider(G1Spider, "governo_raw", "governo_raw", context.log)
-
-@asset(
-    description="Executa os modelos DBT para transformar os dados brutos.",
-    kinds={"dbt"},
-)
-def executar_dbt(context) -> None:
-    if not os.path.exists(DBT_PROJECT_PATH):
-        raise NotADirectoryError(f"O diretório especificado para o DBT não existe: {DBT_PROJECT_PATH}")
-    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
-    context.log.info("Modelos DBT executados com sucesso.")
-
-@asset(
-    description="Trata os dados transformados de economia e salva no DuckDB e MongoDB.",
-    kinds={"duckdb", "pandas" , "mongodb"},
-    # Sem non_argument_deps, assumimos que o DBT rodou antes por depender da execução
-    # Estes dados devem ser consumidos após executar_dbt (utilizar planejamento do pipeline)
-)
-def tratar_dados_economia(context) -> pd.DataFrame:
-    return tratar_dados_func(
-        transformed_table="economia_transformed",
-        processed_table="economia_processed",
-        resultados_dir=RESULTADOS_DIR,
-        collection_name="economia_processed",
-        logger=context.log
-    )
-
-@asset(
-    description="Trata os dados transformados de governo e salva no DuckDB e MongoDB.",
-    kinds={"duckdb", "pandas" , "mongodb"},
-)
-def tratar_dados_governo(context) -> pd.DataFrame:
-    return tratar_dados_func(
-        transformed_table="governo_transformed",
-        processed_table="governo_processed",
-        resultados_dir=RESULTADOS_DIR,
-        collection_name="governo_processed",
-        logger=context.log
-    )
-
-@asset(
-    description="Treina um modelo de IA com dados de economia processados e salva métricas no DuckDB e MongoDB.",
-    kinds={"python", "scikitlearn"},
-    # Agora especificamos que ele depende da saída do asset tratar_dados_economia via ins
-    ins={"tratar_dados_economia": AssetIn()},
-)
-def treinar_ia_economia(context, tratar_dados_economia: pd.DataFrame) -> None:
-    # Aqui usamos o parâmetro tratar_dados_economia, correspondendo à chave ins acima
-    treinar_ia(
-        df=tratar_dados_economia,
-        nome_modelo="economia",
-        resultados_dir=RESULTADOS_DIR,
-        logger=context.log
-    )
-
-@asset(
-    description="Treina um modelo de IA com dados de governo processados e salva métricas no DuckDB e MongoDB.",
-    kinds={"python", "scikitlearn"},
-    ins={"tratar_dados_governo": AssetIn()},
-)
-def treinar_ia_governo(context, tratar_dados_governo: pd.DataFrame) -> None:
-    # Aqui usamos o parâmetro tratar_dados_governo, correspondendo à chave ins acima
-    treinar_ia(
-        df=tratar_dados_governo,
-        nome_modelo="governo",
-        resultados_dir=RESULTADOS_DIR,
-        logger=context.log
-    )
-
-@asset(
-    description="Verifica e imprime amostras dos dados transformados no DuckDB.",
-    kinds={"python"},
-    ins={"tratar_dados_economia": AssetIn(), "tratar_dados_governo": AssetIn()},
-)
-def verificar_dados_transformados(context, tratar_dados_economia: pd.DataFrame, tratar_dados_governo: pd.DataFrame) -> None:
-    # Recebemos como input os DataFrames já tratados, garantindo que rodamos após eles.
-    conn = duckdb.connect(DUCKDB_FILE)
-
-    try:
-        governo_transformed_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
-        context.log.info("Dados transformados de governo:")
-        context.log.info(governo_transformed_df)
-    except Exception as e:
-        context.log.error(f"Erro ao verificar dados transformados de governo: {e}")
-
-    try:
-        economia_transformed_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
-        context.log.info("Dados transformados de economia:")
-        context.log.info(economia_transformed_df)
-    except Exception as e:
-        context.log.error(f"Erro ao verificar dados transformados de economia: {e}")
-
-    conn.close()
-
-@asset(
-    description="Verifica a quantidade de dados disponíveis para treinamento de IA.",
-    kinds={"python"},
-    ins={"tratar_dados_economia": AssetIn(), "tratar_dados_governo": AssetIn()},
-)
-def verificar_dados_disponiveis(context, tratar_dados_economia: pd.DataFrame, tratar_dados_governo: pd.DataFrame) -> None:
-    # Aqui já temos os dados tratados, podemos contar quantos registros temos
-    economia_df = tratar_dados_economia
-    governo_df = tratar_dados_governo
-    
-    context.log.info(f"Dados disponíveis para Economia: {economia_df.shape[0]} registros.")
-    context.log.info(f"Dados disponíveis para Governo: {governo_df.shape[0]} registros.")'''
-'''
-# assets.py
-import os
-import json
-import pandas as pd
-from datetime import datetime
-from dagster import asset
-from scrapy.crawler import CrawlerProcess
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider
-import duckdb
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from filelock import FileLock
-import hashlib
-import subprocess
-
-# Importar funções de MongoDB
-from db_mongo.conexao_mongo import salvar_no_mongo
-
-# ---------------------------- CONFIGURAÇÃO ----------------------------
-# Diretório base do projeto
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Pasta para armazenar resultados
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
-os.makedirs(RESULTADOS_DIR, exist_ok=True)
-
-# Arquivo DuckDB
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
-
-# Lock para controle de acesso ao DuckDB (evita acessos concorrentes)
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
-
-# ---------------------------- FUNÇÕES AUXILIARES ----------------------------
-def run_spider(spider, raw_table_name, collection_name):
-    """
-    Executa o spider do Scrapy para coletar dados e salva no DuckDB e MongoDB.
-    - Responsabilidade Única: Esta função apenas cuida da coleta.
-    - Clean Code: Nomes descritivos, lógica clara.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    # Executa o spider do Scrapy
-    process = CrawlerProcess(settings={
-        "FEEDS": {output_file: {"format": "json"}},
-        "FEED_EXPORT_ENCODING": "utf-8",
-    })
-    process.crawl(spider)
-    process.start()  # Bloqueante até terminar a coleta
-
-    # Carrega os dados coletados
-    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
-        data = json.load(f)
-
-    # Processa os dados para um formato consistente antes de inserir no DuckDB
-    processed_data = []
-    if raw_table_name == "economia_raw":
-        for item in data:
-            for time_key, titles in item.items():
-                for title in titles:
-                    processed_data.append({
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
-                        "titulo_noticia": title,
-                        "texto": "",  # Placeholder se não houver texto completo
-                        "data_publicacao": None,
-                        "time_ago": time_key,
-                    })
-    elif raw_table_name == "governo_raw":
-        for item in data:
-            processed_data.append({
-                "id": hashlib.md5(str(item).encode()).hexdigest(),
-                "titulo_noticia": item.get("title", ""),
-                "texto": item.get("body", ""),
-                "data_publicacao": item.get("data_publicacao", ""),
-            })
-
-    df = pd.DataFrame(processed_data)
-
-    # Garantir colunas essenciais
-    if 'id' not in df.columns:
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
-    if 'data_publicacao' not in df.columns:
-        df['data_publicacao'] = pd.NaT
-
-    # Insere no DuckDB
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        try:
-            count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0]  # type: ignore
-        except duckdb.BinderException:
-            count = 0
-
-        if count > 0:
-            # Apende novos dados sem duplicatas
-            conn.execute(f"""
-                INSERT INTO {raw_table_name} 
-                SELECT * FROM df_view 
-                WHERE id NOT IN (SELECT id FROM {raw_table_name})
-            """)
-            print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
-        else:
-            # Cria a tabela se não existir
-            conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
-            print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.")
-        conn.close()
-
-    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
-
-    # Salvar dados no MongoDB
-    salvar_no_mongo(processed_data, collection_name)
-    print(f"Novos dados adicionados à coleção '{collection_name}' no MongoDB.")
-
-def carregar_dados_duckdb(table_name):
-    """
-    Carrega dados de uma tabela DuckDB.
-    - Responsabilidade Única: apenas carrega dados da tabela.
-    - Caso a tabela não exista, retorna DataFrame vazio.
-    """
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        try:
-            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-        except duckdb.BinderException:
-            print(f"Tabela {table_name} não encontrada no DuckDB.")
-            df = pd.DataFrame()
-        conn.close()
-    return df
-
-def tratar_dados_func(transformed_table, processed_table, resultados_dir, collection_name):
-    """
-    Trata os dados transformados, realiza análise de sentimento e prepara para treinamento de IA.
-    - Aplicação de Clean Code:
-      * Função coesa: trata dados, extrai sentimentos, salva resumo.
-      * Nomes descritivos.
-    - SOLID: O princípio da responsabilidade única é aplicado; esta função não faz coleta nem treinamento, só trata dados.
-    """
-    df = carregar_dados_duckdb(transformed_table)
-    if df.empty:
-        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
-        return pd.DataFrame()
-
-    # Análise de sentimento
-    analyzer = SentimentIntensityAnalyzer()
-    df['texto_para_sentimento'] = df.apply(
-        lambda row: row['texto'] if isinstance(row['texto'], str) and row['texto'].strip() else row['titulo_noticia'],
-        axis=1
-    )
-    df['sentimento'] = df['texto_para_sentimento'].apply(
-        lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else 0
-    )
-    df['sentimento'] = df['sentimento'].fillna(0)
-
-    # Classificação com base no VADER:
-    # compound >=0.05 => positivo; <= -0.05 => negativo; caso contrário neutro
-    df['sentimento_classificacao'] = df['sentimento'].apply(
-        lambda x: 'positivo' if x >= 0.05 else ('negativo' if x <= -0.05 else 'neutro')
-    )
-    # Target binário para simplificar o treinamento
-    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
-
-    # Salva resumo dos sentimentos
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    # Salvar dados processados no MongoDB
-    salvar_no_mongo(df.to_dict(orient='records'), f"{collection_name}_processed")
-    print(f"Dados processados salvos na coleção '{collection_name}_processed' no MongoDB.")
-
-    # Verificar se há classes suficientes para treinamento
-    contagem_targets = df['target'].value_counts()
-    if contagem_targets.shape[0] < 2:
-        print(f"Não há classes suficientes para treinar IA em {transformed_table}.")
-        # Mesmo assim salvamos a tabela processed (pode ser útil)
-        with duckdb_lock:
-            conn = duckdb.connect(DUCKDB_FILE)
-            conn.register("df_view", df)
-            conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-            conn.close()
-        return df
-
-    # Salva tabela processed no DuckDB
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-        conn.close()
-    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
-
-    return df
-
-def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
-    """
-    Treina modelos de IA e gera métricas, matrizes de confusão e relatórios.
-    - Clean Code: função clara, comentários explicando, nomes descritivos.
-    - SOLID: Esta função não faz coleta nem transformação, apenas treina e gera relatórios.
-    - Design Patterns: Poderíamos aplicar Strategy se quisermos trocar os algoritmos facilmente.
-    """
-    if df.empty:
-        print(f"Nenhum dado disponível para treinamento em {nome_modelo}.")
-        return
-
-    X = df[['sentimento']].fillna(0)
-    y = df['target']
-
-    if y.nunique() <= 1:
-        print(f"Dados insuficientes para treinar IA em {nome_modelo}.")
-        return
-
-    # Divisão estratificada
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    except ValueError as e:
-        print(f"Erro ao dividir os dados para {nome_modelo}: {e}")
-        return
-
-    if y_train.nunique() < 2 or y_test.nunique() < 2:
-        print(f"Dados insuficientes após divisão para treinar IA em {nome_modelo}.")
-        return
-
-    algoritmos = {
-        "RandomForest": RandomForestClassifier(random_state=42),
-        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
-        "SVM": SVC(random_state=42)
-    }
-
-    metrics_list = []
-
-    for nome_algoritmo, modelo in algoritmos.items():
-        try:
-            modelo.fit(X_train, y_train)
-            y_pred = modelo.predict(X_test)
-
-            acuracia = accuracy_score(y_test, y_pred)
-            precisao = precision_score(y_test, y_pred, zero_division=0)
-            recall = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
-
-            metrics_list.append({
-                "Algoritmo": nome_algoritmo,
-                "Acurácia": acuracia,
-                "Precisão": precisao,
-                "Recall": recall,
-                "F1-Score": f1
-            })
-
-            cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
-            cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
-            cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
-            cm_df.to_csv(cm_file)
-            print(f"Matriz de Confusão para {nome_algoritmo} salva em '{cm_file}'.")
-
-        except ValueError as e:
-            print(f"Erro ao treinar {nome_algoritmo} em {nome_modelo}: {e}")
-            continue
-
-    if metrics_list:
-        metrics_df = pd.DataFrame(metrics_list)
-        metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
-        metrics_df.to_csv(metrics_file, index=False)
-        print(f"Métricas dos modelos salvas em '{metrics_file}'.")
-    else:
-        print(f"Nenhuma métrica foi coletada para {nome_modelo}.")
-        return
-
-    # Resumo de sentimentos
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    # Relatório detalhado
-    if not metrics_df.empty:
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\n\nMétricas dos Modelos:\n")
-            relatorio.write(metrics_df.to_string(index=False))
-            relatorio.write("\n\nObservações:\n")
-            relatorio.write("A IA está analisando o sentimento das notícias com base na pontuação do VADER.\n")
-            relatorio.write("Classes: Positivo (1), Negativo (0), Neutro não usado no target (0 ou 1).\n")
-        print(f"Relatório detalhado salvo em '{relatorio_path}'.")
-    else:
-        print(f"Nenhum relatório gerado para {nome_modelo}.")
-
-# ---------------------------- ASSETS ----------------------------
-
-@asset(
-    description="Executa o crawler para coletar notícias de economia e salva no DuckDB e MongoDB.",
-    kinds={"python"},  # Mantém ícone python
-)
-def crawler_economia() -> None:
-    run_spider(NoticiasSpider, "economia_raw", "economia_raw")
-
-@asset(
-    description="Executa o crawler para coletar notícias de governo e salva no DuckDB e MongoDB.",
-    kinds={"python"},  # Mantém ícone python
-)
-def crawler_governo() -> None:
-    run_spider(G1Spider, "governo_raw", "governo_raw")
-
-@asset(
-    description="Executa os modelos DBT para transformar os dados brutos.",
-    non_argument_deps={"crawler_economia", "crawler_governo"},
-    kinds={"dbt"}  # Mantém ícone dbt
-)
-def executar_dbt() -> None:
-    if not os.path.exists(DBT_PROJECT_PATH):
-        raise NotADirectoryError(f"O diretório DBT não existe: {DBT_PROJECT_PATH}")
-    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
-    print("Modelos DBT executados com sucesso.")
-
-@asset(
-    description="Trata os dados transformados de economia e salva no DuckDB e MongoDB.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}  # Ícones
-)
-def tratar_dados_economia() -> pd.DataFrame:
-    return tratar_dados_func("economia_transformed", "economia_processed", RESULTADOS_DIR, "economia_processed")
-
-@asset(
-    description="Trata os dados transformados de governo e salva no DuckDB e MongoDB.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}
-)
-def tratar_dados_governo() -> pd.DataFrame:
-    return tratar_dados_func("governo_transformed", "governo_processed", RESULTADOS_DIR, "governo_processed")
-
-@asset(
-    description="Treina IA com dados de economia e gera métricas e relatórios.",
-    non_argument_deps={"tratar_dados_economia"},
-    kinds={"python", "scikitlearn"}  # Ícones python, scikitlearn
-)
-def treinar_ia_economia() -> None:
-    df = carregar_dados_duckdb("economia_processed")
-    treinar_ia(df, "economia", RESULTADOS_DIR)
-
-@asset(
-    description="Treina IA com dados de governo e gera métricas e relatórios.",
-    non_argument_deps={"tratar_dados_governo"},
-    kinds={"python", "scikitlearn"}
-)
-def treinar_ia_governo() -> None:
-    df = carregar_dados_duckdb("governo_processed")
-    treinar_ia(df, "governo", RESULTADOS_DIR)
-
-@asset(
-    description="Verifica amostras dos dados transformados no DuckDB.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_transformados() -> None:
-    conn = duckdb.connect(DUCKDB_FILE)
-
-    # Verificando governo
-    governo_transformed_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
-    print("Amostra dados transformados de governo:")
-    print(governo_transformed_df)
-
-    # Verificando economia
-    economia_transformed_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
-    print("Amostra dados transformados de economia:")
-    print(economia_transformed_df)
-
-    conn.close()
-
-@asset(
-    description="Verifica quantidade de dados disponíveis para IA.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_disponiveis() -> None:
-    economia_df = carregar_dados_duckdb("economia_processed")
-    governo_df = carregar_dados_duckdb("governo_processed")
-
-    print(f"Dados disponíveis para Economia: {economia_df.shape[0]} registros.")
-    print(f"Dados disponíveis para Governo: {governo_df.shape[0]} registros.")'''
-
-'''
-
-# assets.py
-import os
-import json
-import pandas as pd
-from datetime import datetime
-from dagster import asset
-from scrapy.crawler import CrawlerProcess
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider
-import duckdb
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from filelock import FileLock
-import hashlib
-import subprocess
-
-# Importar funções de MongoDB
-from db_mongo.conexao_mongo import salvar_no_mongo
-
-# ---------------------------- CONFIG ----------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
-os.makedirs(RESULTADOS_DIR, exist_ok=True)
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
-
-# ---------------------------- FUNÇÕES AUXILIARES ----------------------------
-def run_spider(spider, raw_table_name, collection_name):
-    """
-    Executa spider do Scrapy, salva dados no DuckDB e MongoDB.
-    - Clean Code: nomes claros, funções coesas.
-    - SOLID (S): Função faz apenas coleta e inserção inicial.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    process = CrawlerProcess(settings={
-        "FEEDS": {output_file: {"format": "json"}},
-        "FEED_EXPORT_ENCODING": "utf-8",
-    })
-    process.crawl(spider)
-    process.start()
-
-    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
-        data = json.load(f)
-
-    processed_data = []
-    if raw_table_name == "economia_raw":
-        for item in data:
-            for time_key, titles in item.items():
-                for title in titles:
-                    processed_data.append({
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
-                        "titulo_noticia": title,
-                        "texto": "",
-                        "data_publicacao": None,
-                        "time_ago": time_key,
-                    })
-    elif raw_table_name == "governo_raw":
-        for item in data:
-            processed_data.append({
-                "id": hashlib.md5(str(item).encode()).hexdigest(),
-                "titulo_noticia": item.get("title", ""),
-                "texto": item.get("body", ""),
-                "data_publicacao": item.get("data_publicacao", ""),
-            })
-
-    df = pd.DataFrame(processed_data)
-
-    if 'id' not in df.columns:
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
-    if 'data_publicacao' not in df.columns:
-        df['data_publicacao'] = pd.NaT
-
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        try:
-            count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0] # type: ignore
-        except duckdb.BinderException:
-            count = 0
-
-        if count > 0:
-            conn.execute(f"""
-                INSERT INTO {raw_table_name} 
-                SELECT * FROM df_view 
-                WHERE id NOT IN (SELECT id FROM {raw_table_name})
-            """)
-            print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
-        else:
-            conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
-            print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.")
-        conn.close()
-
-    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
-    salvar_no_mongo(processed_data, collection_name)
-    print(f"Novos dados adicionados à coleção '{collection_name}' no MongoDB.")
-
-def carregar_dados_duckdb(table_name):
-    """
-    Carrega dados de uma tabela no DuckDB.
-    - Clean Code: função simples e clara.
-    """
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        try:
-            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-        except duckdb.BinderException:
-            print(f"Tabela {table_name} não encontrada no DuckDB.")
-            df = pd.DataFrame()
-        conn.close()
-    return df
-
-def tratar_dados_func(transformed_table, processed_table, resultados_dir, collection_name):
-    """
-    Trata dados transformados: análise de sentimento, salva resumo e dados processados.
-    - Sempre salva a tabela processed, mesmo sem classes suficientes.
-    """
-    df = carregar_dados_duckdb(transformed_table)
-    if df.empty:
-        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
-        return pd.DataFrame()
-
-    analyzer = SentimentIntensityAnalyzer()
-    df['texto_para_sentimento'] = df.apply(
-        lambda row: row['texto'] if isinstance(row['texto'], str) and row['texto'].strip() else row['titulo_noticia'],
-        axis=1
-    )
-    df['sentimento'] = df['texto_para_sentimento'].apply(
-        lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else 0
-    )
-    df['sentimento'] = df['sentimento'].fillna(0)
-
-    # Classificação baseada no VADER
-    df['sentimento_classificacao'] = df['sentimento'].apply(
-        lambda x: 'positivo' if x >= 0.05 else ('negativo' if x <= -0.05 else 'neutro')
-    )
-    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    salvar_no_mongo(df.to_dict(orient='records'), f"{collection_name}_processed")
-    print(f"Dados processados salvos na coleção '{collection_name}_processed' no MongoDB.")
-
-    # Salva tabela processed no DuckDB sempre
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-        conn.close()
-    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
-
-    return df
-
-def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
-    """
-    Treina modelos de IA. Sempre gera relatório, mesmo se não houver métricas.
-    """
-    # Caso não haja dados, gera relatório mínimo
-    if df.empty:
-        print(f"Nenhum dado para treinar IA em {nome_modelo}. Gerando relatório vazio.")
-        # Cria um relatório vazio
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Nenhum dado disponível para treinamento.\n")
-        return
-
-    X = df[['sentimento']].fillna(0)
-    y = df['target']
-
-    if y.nunique() <= 1:
-        print(f"Dados insuficientes para treinar IA em {nome_modelo}, mas gerando relatório.")
-        # Mesmo sem métricas, gera relatório informando insuficiência.
-        sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-        sentimento_summary.columns = ['Sentimento', 'Contagem']
-        sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-        sentimento_summary.to_csv(sentimento_file, index=False)
-
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Dados insuficientes para treinamento.\n")
-            relatorio.write("\nDistribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\nNenhuma métrica foi gerada.\n")
-        return
-
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    except ValueError as e:
-        print(f"Erro ao dividir dados: {e}. Gerando relatório indicando erro.")
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write(f"Erro ao dividir dados: {e}\n")
-        return
-
-    if y_train.nunique() < 2 or y_test.nunique() < 2:
-        print(f"Classes insuficientes após split para {nome_modelo}. Gerando relatório mínimo.")
-        sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-        sentimento_summary.columns = ['Sentimento', 'Contagem']
-        sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-        sentimento_summary.to_csv(sentimento_file, index=False)
-
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório IA {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Classes insuficientes após split.\n")
-            relatorio.write("Distribuição Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-        return
-
-    algoritmos = {
-        "RandomForest": RandomForestClassifier(random_state=42),
-        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
-        "SVM": SVC(random_state=42)
-    }
-
-    metrics_list = []
-
-    for nome_algoritmo, modelo in algoritmos.items():
-        try:
-            modelo.fit(X_train, y_train)
-            y_pred = modelo.predict(X_test)
-
-            acuracia = accuracy_score(y_test, y_pred)
-            precisao = precision_score(y_test, y_pred, zero_division=0)
-            recall = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
-
-            metrics_list.append({
-                "Algoritmo": nome_algoritmo,
-                "Acurácia": acuracia,
-                "Precisão": precisao,
-                "Recall": recall,
-                "F1-Score": f1
-            })
-
-            cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
-            cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
-            cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
-            cm_df.to_csv(cm_file)
-            print(f"Matriz de Confusão para {nome_algoritmo} salva em '{cm_file}'.")
-
-        except ValueError as e:
-            print(f"Erro ao treinar {nome_algoritmo}: {e}")
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
-    relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-
-    if metrics_list:
-        metrics_df = pd.DataFrame(metrics_list)
-        metrics_df.to_csv(metrics_file, index=False)
-        print(f"Métricas salvas em '{metrics_file}'.")
-
-        # Cria relatório detalhado
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\n\nMétricas dos Modelos:\n")
-            relatorio.write(metrics_df.to_string(index=False))
-            relatorio.write("\n\nObservações:\n")
-            relatorio.write("IA analisando sentimento com VADER.\nClasses: Positivo(1), Negativo(0).\n")
-        print(f"Relatório detalhado salvo em '{relatorio_path}'.")
-    else:
-        # Mesmo sem métricas, cria relatório mínimo
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório IA {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Nenhuma métrica coletada (dados insuficientes ou erro no treinamento).\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-        print(f"Relatório mínimo salvo em '{relatorio_path}' (sem métricas).")
-
-# ---------------------------- ASSETS ----------------------------
-@asset(
-    description="Executa o crawler (economia).",
-    kinds={"python"}
-)
-def crawler_economia() -> None:
-    run_spider(NoticiasSpider, "economia_raw", "economia_raw")
-
-@asset(
-    description="Executa o crawler (governo).",
-    kinds={"python"}
-)
-def crawler_governo() -> None:
-    run_spider(G1Spider, "governo_raw", "governo_raw")
-
-@asset(
-    description="Executa DBT após coleta.",
-    non_argument_deps={"crawler_economia", "crawler_governo"},
-    kinds={"dbt"}
-)
-def executar_dbt() -> None:
-    if not os.path.exists(DBT_PROJECT_PATH):
-        raise NotADirectoryError(f"Diretório DBT não existe: {DBT_PROJECT_PATH}")
-    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
-    print("Modelos DBT executados com sucesso.")
-
-@asset(
-    description="Trata dados de economia.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}
-)
-def tratar_dados_economia() -> pd.DataFrame:
-    return tratar_dados_func("economia_transformed", "economia_processed", RESULTADOS_DIR, "economia_processed")
-
-@asset(
-    description="Trata dados de governo.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}
-)
-def tratar_dados_governo() -> pd.DataFrame:
-    return tratar_dados_func("governo_transformed", "governo_processed", RESULTADOS_DIR, "governo_processed")
-
-@asset(
-    description="Treina IA economia.",
-    non_argument_deps={"tratar_dados_economia"},
-    kinds={"python", "scikitlearn"}
-)
-def treinar_ia_economia() -> None:
-    df = carregar_dados_duckdb("economia_processed")
-    treinar_ia(df, "economia", RESULTADOS_DIR)
-
-@asset(
-    description="Treina IA governo.",
-    non_argument_deps={"tratar_dados_governo"},
-    kinds={"python", "scikitlearn"}
-)
-def treinar_ia_governo() -> None:
-    df = carregar_dados_duckdb("governo_processed")
-    treinar_ia(df, "governo", RESULTADOS_DIR)
-
-@asset(
-    description="Verifica dados transformados.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_transformados() -> None:
-    conn = duckdb.connect(DUCKDB_FILE)
-    gov_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
-    print("Governo transformado (amostra):")
-    print(gov_df)
-    eco_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
-    print("Economia transformado (amostra):")
-    print(eco_df)
-    conn.close()
-
-@asset(
-    description="Verifica disponibilidade dados IA.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_disponiveis() -> None:
-    eco_df = carregar_dados_duckdb("economia_processed")
-    gov_df = carregar_dados_duckdb("governo_processed")
-    print(f"Economia: {eco_df.shape[0]} registros disponíveis.")
-    print(f"Governo: {gov_df.shape[0]} registros disponíveis.")'''
-
-
-'''
-import os
-import json
-import pandas as pd
-from datetime import datetime
-from dagster import asset
-from scrapy.crawler import CrawlerProcess
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider
-import duckdb
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from filelock import FileLock
-import hashlib
-import subprocess
-from db_mongo.conexao_mongo import salvar_no_mongo
-
-# Diretório base do projeto
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Pasta de resultados
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
-os.makedirs(RESULTADOS_DIR, exist_ok=True)
-
-# Arquivo DuckDB
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
-
-# Lock para controle concorrente do DuckDB
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
-
-def run_spider(spider, raw_table_name, collection_name):
-    """
-    Executa spider do Scrapy e salva os resultados no DuckDB e MongoDB.
-    """
-
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    process = CrawlerProcess(settings={
-        "FEEDS": {output_file: {"format": "json"}},
-        "FEED_EXPORT_ENCODING": "utf-8",
-    })
-    process.crawl(spider)
-    process.start()
-
-    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
-        data = json.load(f)
-
-    processed_data = []
-    if raw_table_name == "economia_raw":
-        # Processa dados de economia
-        for item in data:
-            for time_key, titles in item.items():
-                for title in titles:
-                    processed_data.append({
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
-                        "titulo_noticia": title if title else "",
-                        "texto": "",  # Se não houver texto detalhado
-                        "data_publicacao": None,
-                        "time_ago": time_key
-                    })
-    elif raw_table_name == "governo_raw":
-        # Processa dados de governo
-        for item in data:
-            processed_data.append({
-                "id": hashlib.md5(str(item).encode()).hexdigest(),
-                "titulo_noticia": item.get("title", "") or "",
-                "texto": item.get("body", "") or "",
-                "data_publicacao": item.get("data_publicacao", "") or ""
-            })
-
-    df = pd.DataFrame(processed_data)
-
-    # Garante coluna id
-    if 'id' not in df.columns:
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
-    if 'data_publicacao' not in df.columns:
-        df['data_publicacao'] = pd.NaT
-
-    # Insere no DuckDB
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        try:
-            count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0] # type: ignore
-        except duckdb.BinderException:
-            count = 0
-
-        if count > 0:
-            # Insere sem duplicatas
-            conn.execute(f"""
-                INSERT INTO {raw_table_name} 
-                SELECT * FROM df_view 
-                WHERE id NOT IN (SELECT id FROM {raw_table_name})
-            """)
-        else:
-            conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
-        conn.close()
-
-    # Salva brutos no MongoDB
-    salvar_no_mongo(processed_data, collection_name)
-
-@asset(description="Executa o crawler para economia", kinds={"python"})
-def crawler_economia():
-    run_spider(NoticiasSpider, "economia_raw", "economia_raw")
-
-@asset(description="Executa o crawler para governo", kinds={"python"})
-def crawler_governo():
-    run_spider(G1Spider, "governo_raw", "governo_raw")
-
-@asset(description="Executa modelos DBT", non_argument_deps={"crawler_economia","crawler_governo"}, kinds={"dbt"})
-def executar_dbt():
-    if not os.path.exists(DBT_PROJECT_PATH):
-        raise NotADirectoryError(f"DBT project dir não existe: {DBT_PROJECT_PATH}")
-    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
-
-def carregar_dados_duckdb(table_name):
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        try:
-            df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-        except duckdb.BinderException:
-            df = pd.DataFrame()
-        conn.close()
-    return df
-
-def preparar_dados_para_mongo(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Ajusta datas e valores nulos para antes de salvar no Mongo.
-    Converte datas para string, troca NaT por None.
-    """
-    # Converte NaT para None
-    df = df.where(pd.notnull(df), None)
-
-    # Se houver data_publicacao, converter para string
-    if 'data_publicacao' in df.columns:
-        # Se houver datas no formato datetime64, converter para string
-        if pd.api.types.is_datetime64_any_dtype(df['data_publicacao']):
-            df['data_publicacao'] = df['data_publicacao'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            # Se não é datetime, mas sim string/None, já está ok
-            pass
-
-    return df
-
-def analisar_sentimento(df: pd.DataFrame) -> pd.DataFrame:
-    analyzer = SentimentIntensityAnalyzer()
-    df['texto_para_sentimento'] = df.apply(
-        lambda row: row['texto'] if isinstance(row['texto'], str) and row['texto'].strip() else row['titulo_noticia'],
-        axis=1
-    )
-    df['sentimento'] = df['texto_para_sentimento'].apply(lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else 0)
-    df['sentimento'] = df['sentimento'].fillna(0)
-    df['sentimento_classificacao'] = df['sentimento'].apply(
-        lambda x: 'positivo' if x >= 0.05 else ('negativo' if x <= -0.05 else 'neutro')
-    )
-    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
-    return df
-
-def tratar_dados_func(transformed_table, processed_table, resultados_dir, collection_name):
-    df = carregar_dados_duckdb(transformed_table)
-    if df.empty:
-        print(f"Nenhum dado no {transformed_table}.")
-        return pd.DataFrame()
-
-    # Aplica análise de sentimento
-    df = analisar_sentimento(df)
-
-    # Salva resumo de sentimentos
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-
-    # Prepara df para salvar no Mongo
-    df = preparar_dados_para_mongo(df)
-
-    # Salva no MongoDB dados processados
-    salvar_no_mongo(df.to_dict(orient='records'), f"{collection_name}_processed")
-
-    # Verifica se há classes suficientes
-    if df['target'].nunique() < 2:
-        print(f"Dados insuficientes para treinamento em {transformed_table}.")
-        # Mesmo sem classes suficientes, ainda salvamos o df no DuckDB
-        with duckdb_lock:
-            conn = duckdb.connect(DUCKDB_FILE)
-            conn.register("df_view", df)
-            conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-            conn.close()
-        return df
-
-    # Salva df processado no DuckDB
-    with duckdb_lock:
-        conn = duckdb.connect(DUCKDB_FILE)
-        conn.register("df_view", df)
-        conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-        conn.close()
-    return df
-
-@asset(description="Trata dados economia", non_argument_deps={"executar_dbt"}, kinds={"duckdb","pandas","mongodb"})
-def tratar_dados_economia():
-    return tratar_dados_func("economia_transformed","economia_processed",RESULTADOS_DIR,"economia_processed")
-
-@asset(description="Trata dados governo", non_argument_deps={"executar_dbt"}, kinds={"duckdb","pandas","mongodb"})
-def tratar_dados_governo():
-    return tratar_dados_func("governo_transformed","governo_processed",RESULTADOS_DIR,"governo_processed")
-
-def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
-    if df.empty:
-        print(f"Nenhum dado para treinar IA em {nome_modelo}.")
-        return
-
-    # Verifica classes
-    if df['target'].nunique() <= 1:
-        print(f"Dados insuficientes para treino em {nome_modelo}. Apenas uma classe encontrada.")
-        # Gera relatório mínimo
-        sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-        sentimento_summary.columns = ['Sentimento','Contagem']
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-
-        with open(relatorio_path,'w',encoding='utf-8') as rel:
-            rel.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            rel.write("="*50+"\n\n")
-            rel.write("Dados insuficientes para treinamento (apenas uma classe).\n\n")
-            rel.write("Distribuição de Sentimentos:\n")
-            rel.write(sentimento_summary.to_string(index=False)+"\n\n")
-            rel.write("Nenhuma métrica foi gerada.\n")
-            rel.write("Ação sugerida: Coletar mais dados para ter pelo menos duas classes.\n")
-
-        # Salva sentimento_summary
-        sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-        sentimento_summary.to_csv(sentimento_file, index=False)
-
-        return
-
-    # Se há classes suficientes, treinar:
-    X = df[['sentimento']].fillna(0)
-    y = df['target']
-    X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2,random_state=42,stratify=y)
-    if y_train.nunique()<2 or y_test.nunique()<2:
-        print(f"Ainda insuficiente após split em {nome_modelo}.")
-        return
-
-    algoritmos = {
-        "RandomForest": RandomForestClassifier(random_state=42),
-        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
-        "SVM": SVC(random_state=42)
-    }
-
-    metrics_list = []
-    for nome_alg, modelo in algoritmos.items():
-        try:
-            modelo.fit(X_train,y_train)
-            y_pred = modelo.predict(X_test)
-            acuracia = accuracy_score(y_test,y_pred)
-            precisao = precision_score(y_test,y_pred,zero_division=0)
-            recall = recall_score(y_test,y_pred,zero_division=0)
-            f1 = f1_score(y_test,y_pred,zero_division=0)
-            metrics_list.append({"Algoritmo":nome_alg,"Acurácia":acuracia,"Precisão":precisao,"Recall":recall,"F1-Score":f1})
-            cm = confusion_matrix(y_test,y_pred,labels=[0,1])
-            cm_df = pd.DataFrame(cm,index=["Negativo","Positivo"],columns=["Negativo","Positivo"])
-            cm_file = os.path.join(resultados_dir,f"{nome_modelo}_{nome_alg}_confusion_matrix.csv")
-            cm_df.to_csv(cm_file,index=False)
-        except ValueError as e:
-            print(f"Erro ao treinar {nome_alg} em {nome_modelo}: {e}")
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns=['Sentimento','Contagem']
-    sentimento_file = os.path.join(resultados_dir,f"{nome_modelo}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file,index=False)
-
-    if metrics_list:
-        metrics_df = pd.DataFrame(metrics_list)
-        metrics_file = os.path.join(resultados_dir,f"{nome_modelo}_metrics.csv")
-        metrics_df.to_csv(metrics_file,index=False)
-
-        # Relatório detalhado
-        relatorio_path = os.path.join(resultados_dir,f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path,'w',encoding='utf-8') as rel:
-            rel.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            rel.write("="*50+"\n\n")
-            rel.write("Distribuição de Sentimentos:\n")
-            rel.write(sentimento_summary.to_string(index=False)+"\n\n")
-            rel.write("Métricas dos Modelos:\n")
-            rel.write(metrics_df.to_string(index=False)+"\n\n")
-            rel.write("Observações:\nA IA está analisando sentimento com base no VADER.\n")
-            rel.write("Classes: Positivo (1), Negativo (0)\n")
-            rel.write("Sugere-se analisar matrizes de confusão salvas para detalhes.\n")
-    else:
-        # Caso não haja métricas (falha em todos os algos)
-        relatorio_path = os.path.join(resultados_dir,f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path,'w',encoding='utf-8') as rel:
-            rel.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            rel.write("="*50+"\n\n")
-            rel.write("Nenhuma métrica foi coletada.\n")
-
-@asset(description="Treina IA economia",non_argument_deps={"tratar_dados_economia"}, kinds={"python","scikitlearn"})
-def treinar_ia_economia():
-    df = carregar_dados_duckdb("economia_processed")
-    treinar_ia(df,"economia",RESULTADOS_DIR)
-
-@asset(description="Treina IA governo",non_argument_deps={"tratar_dados_governo"}, kinds={"python","scikitlearn"})
-def treinar_ia_governo():
-    df = carregar_dados_duckdb("governo_processed")
-    treinar_ia(df,"governo",RESULTADOS_DIR)
-
-@asset(description="Verifica dados transformados", non_argument_deps={"tratar_dados_economia","tratar_dados_governo"}, kinds={"python"})
-def verificar_dados_transformados():
-    conn = duckdb.connect(DUCKDB_FILE)
-    gov_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
-    print("Dados transformados de governo:")
-    print(gov_df)
-    eco_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
-    print("Dados transformados de economia:")
-    print(eco_df)
-    conn.close()
-
-@asset(description="Verifica dados disponíveis p/IA", non_argument_deps={"tratar_dados_economia","tratar_dados_governo"}, kinds={"python"})
-def verificar_dados_disponiveis():
-    eco_df = carregar_dados_duckdb("economia_processed")
-    gov_df = carregar_dados_duckdb("governo_processed")
-    print(f"Dados disponíveis Economia: {eco_df.shape[0]} registros.")
-    print(f"Dados disponíveis Governo: {gov_df.shape[0]} registros.")'''
-    
-import os
-import json
-import pandas as pd
-from datetime import datetime
-from dagster import asset
-from scrapy.crawler import CrawlerProcess
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider
-import duckdb
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from filelock import FileLock
-import hashlib
-import subprocess
-
-# Importar funções de MongoDB
-from db_mongo.conexao_mongo import salvar_no_mongo
-
-# ---------------------------- CONFIG ----------------------------
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados")
-os.makedirs(RESULTADOS_DIR, exist_ok=True)
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb")
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project")
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock"))
-
-# ---------------------------- FUNÇÕES AUXILIARES ----------------------------
-def run_spider(spider, raw_table_name, collection_name):
-    """
-    Executa spider do Scrapy, salva dados no DuckDB e MongoDB.
-    - Clean Code: nomes claros, funções coesas.
-    - SOLID (S): Função faz apenas coleta e inserção inicial.
-    """
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    output_file = f"projeto_dados/data/{raw_table_name}_{timestamp}.json"
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    process = CrawlerProcess(settings={
-        "FEEDS": {output_file: {"format": "json"}},
-        "FEED_EXPORT_ENCODING": "utf-8",
-    })
-    process.crawl(spider)
-    process.start()
-
-    with open(output_file, "r", encoding="utf-8", errors="replace") as f:
-        data = json.load(f)
-
-    processed_data = []
-    if raw_table_name == "economia_raw":
-        for item in data:
-            for time_key, titles in item.items():
-                for title in titles:
-                    processed_data.append({
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(),
-                        "titulo_noticia": title,
-                        "texto": "",
-                        "data_publicacao": None,
-                        "time_ago": time_key,
-                    })
-    elif raw_table_name == "governo_raw":
-        for item in data:
-            processed_data.append({
-                "id": hashlib.md5(str(item).encode()).hexdigest(),
-                "titulo_noticia": item.get("title", ""),
-                "texto": item.get("body", ""),
-                "data_publicacao": item.get("data_publicacao", ""),
-            })
-
-    df = pd.DataFrame(processed_data)
-
-    # Garante que exista a coluna 'id'
-    if 'id' not in df.columns:
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1)
-    # Garante que exista a coluna 'data_publicacao'
-    if 'data_publicacao' not in df.columns:
-        df['data_publicacao'] = pd.NaT
-
-    # Uso de FileLock para evitar concorrência no mesmo processo
-    with duckdb_lock:
-        # Uso do context manager para fechar conexão adequadamente
-        with duckdb.connect(DUCKDB_FILE) as conn:
-            conn.register("df_view", df)
-            try:
-                # Captura tanto BinderException quanto CatalogException
-                count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0]
-            except (duckdb.BinderException, duckdb.CatalogException):
-                count = 0
-
-            if count > 0:
-                conn.execute(f"""
-                    INSERT INTO {raw_table_name} 
-                    SELECT * FROM df_view 
-                    WHERE id NOT IN (SELECT id FROM {raw_table_name})
-                """)
-                print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
-            else:
-                conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view")
-                print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.")
-
-    print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")
-    salvar_no_mongo(processed_data, collection_name)
-    print(f"Novos dados adicionados à coleção '{collection_name}' no MongoDB.")
-
-def carregar_dados_duckdb(table_name):
-    """
-    Carrega dados de uma tabela no DuckDB.
-    - Clean Code: função simples e clara.
-    """
-    with duckdb_lock:
-        # Uso do context manager para fechar conexão adequadamente
-        with duckdb.connect(DUCKDB_FILE) as conn:
-            try:
-                df = conn.execute(f"SELECT * FROM {table_name}").fetchdf()
-            except (duckdb.BinderException, duckdb.CatalogException):
-                print(f"Tabela {table_name} não encontrada no DuckDB.")
-                df = pd.DataFrame()
-    return df
-
-def tratar_dados_func(transformed_table, processed_table, resultados_dir, collection_name):
-    """
-    Trata dados transformados: análise de sentimento, salva resumo e dados processados.
-    - Sempre salva a tabela processed, mesmo sem classes suficientes.
-    """
-    df = carregar_dados_duckdb(transformed_table)
-    if df.empty:
-        print(f"Nenhum dado encontrado na tabela {transformed_table}.")
-        return pd.DataFrame()
-
-    analyzer = SentimentIntensityAnalyzer()
-    df['texto_para_sentimento'] = df.apply(
-        lambda row: row['texto'] if isinstance(row['texto'], str) and row['texto'].strip() else row['titulo_noticia'],
-        axis=1
-    )
-    df['sentimento'] = df['texto_para_sentimento'].apply(
-        lambda x: analyzer.polarity_scores(x)['compound'] if isinstance(x, str) else 0
-    )
-    df['sentimento'] = df['sentimento'].fillna(0)
-
-    # Classificação baseada no VADER
-    df['sentimento_classificacao'] = df['sentimento'].apply(
-        lambda x: 'positivo' if x >= 0.05 else ('negativo' if x <= -0.05 else 'neutro')
-    )
-    df['target'] = df['sentimento_classificacao'].apply(lambda x: 1 if x == 'positivo' else 0)
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{transformed_table}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    salvar_no_mongo(df.to_dict(orient='records'), f"{collection_name}_processed")
-    print(f"Dados processados salvos na coleção '{collection_name}_processed' no MongoDB.")
-
-    # Salva tabela processed no DuckDB sempre
-    with duckdb_lock:
-        with duckdb.connect(DUCKDB_FILE) as conn:
-            conn.register("df_view", df)
-            conn.execute(f"CREATE OR REPLACE TABLE {processed_table} AS SELECT * FROM df_view")
-    print(f"Dados tratados salvos na tabela '{processed_table}' no DuckDB.")
-
-    return df
-
-def treinar_ia(df: pd.DataFrame, nome_modelo: str, resultados_dir: str):
-    """
-    Treina modelos de IA. Sempre gera relatório, mesmo se não houver métricas.
-    """
-    # Caso não haja dados, gera relatório mínimo
-    if df.empty:
-        print(f"Nenhum dado para treinar IA em {nome_modelo}. Gerando relatório vazio.")
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Nenhum dado disponível para treinamento.\n")
-        return
-
-    X = df[['sentimento']].fillna(0)
-    y = df['target']
-
-    if y.nunique() <= 1:
-        print(f"Dados insuficientes para treinar IA em {nome_modelo}, mas gerando relatório.")
-        sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-        sentimento_summary.columns = ['Sentimento', 'Contagem']
-        sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-        sentimento_summary.to_csv(sentimento_file, index=False)
-
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Dados insuficientes para treinamento.\n")
-            relatorio.write("\nDistribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\nNenhuma métrica foi gerada.\n")
-        return
-
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
-        )
-    except ValueError as e:
-        print(f"Erro ao dividir dados: {e}. Gerando relatório indicando erro.")
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write(f"Erro ao dividir dados: {e}\n")
-        return
-
-    if y_train.nunique() < 2 or y_test.nunique() < 2:
-        print(f"Classes insuficientes após split para {nome_modelo}. Gerando relatório mínimo.")
-        sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-        sentimento_summary.columns = ['Sentimento', 'Contagem']
-        sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-        sentimento_summary.to_csv(sentimento_file, index=False)
-
-        relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório IA {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Classes insuficientes após split.\n")
-            relatorio.write("Distribuição Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-        return
-
-    algoritmos = {
-        "RandomForest": RandomForestClassifier(random_state=42),
-        "LogisticRegression": LogisticRegression(random_state=42, max_iter=1000),
-        "SVM": SVC(random_state=42)
-    }
-
-    metrics_list = []
-
-    for nome_algoritmo, modelo in algoritmos.items():
-        try:
-            modelo.fit(X_train, y_train)
-            y_pred = modelo.predict(X_test)
-
-            acuracia = accuracy_score(y_test, y_pred)
-            precisao = precision_score(y_test, y_pred, zero_division=0)
-            recall = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
-
-            metrics_list.append({
-                "Algoritmo": nome_algoritmo,
-                "Acurácia": acuracia,
-                "Precisão": precisao,
-                "Recall": recall,
-                "F1-Score": f1
-            })
-
-            cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
-            cm_df = pd.DataFrame(cm, index=["Negativo", "Positivo"], columns=["Negativo", "Positivo"])
-            cm_file = os.path.join(resultados_dir, f"{nome_modelo}_{nome_algoritmo}_confusion_matrix.csv")
-            cm_df.to_csv(cm_file)
-            print(f"Matriz de Confusão para {nome_algoritmo} salva em '{cm_file}'.")
-
-        except ValueError as e:
-            print(f"Erro ao treinar {nome_algoritmo}: {e}")
-
-    sentimento_summary = df['sentimento_classificacao'].value_counts().to_frame().reset_index()
-    sentimento_summary.columns = ['Sentimento', 'Contagem']
-    sentimento_file = os.path.join(resultados_dir, f"{nome_modelo}_sentimento_summary.csv")
-    sentimento_summary.to_csv(sentimento_file, index=False)
-    print(f"Resumo de sentimentos salvo em '{sentimento_file}'.")
-
-    metrics_file = os.path.join(resultados_dir, f"{nome_modelo}_metrics.csv")
-    relatorio_path = os.path.join(resultados_dir, f"{nome_modelo}_relatorio.txt")
-
-    if metrics_list:
-        metrics_df = pd.DataFrame(metrics_list)
-        metrics_df.to_csv(metrics_file, index=False)
-        print(f"Métricas salvas em '{metrics_file}'.")
-
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório de Treinamento de IA para {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-            relatorio.write("\n\nMétricas dos Modelos:\n")
-            relatorio.write(metrics_df.to_string(index=False))
-            relatorio.write("\n\nObservações:\n")
-            relatorio.write("IA analisando sentimento com VADER.\nClasses: Positivo(1), Negativo(0).\n")
-        print(f"Relatório detalhado salvo em '{relatorio_path}'.")
-    else:
-        with open(relatorio_path, 'w') as relatorio:
-            relatorio.write(f"Relatório IA {nome_modelo}\n")
-            relatorio.write("="*50 + "\n\n")
-            relatorio.write("Nenhuma métrica coletada (dados insuficientes ou erro no treinamento).\n")
-            relatorio.write("Distribuição de Sentimentos:\n")
-            relatorio.write(sentimento_summary.to_string(index=False))
-        print(f"Relatório mínimo salvo em '{relatorio_path}' (sem métricas).")
-
-# ---------------------------- ASSETS ----------------------------
-@asset(
-    description="Executa o crawler (economia).",
-    kinds={"python"}
-)
-def crawler_economia() -> None:
-    run_spider(NoticiasSpider, "economia_raw", "economia_raw")
-
-@asset(
-    description="Executa o crawler (governo).",
-    kinds={"python"}
-)
-def crawler_governo() -> None:
-    run_spider(G1Spider, "governo_raw", "governo_raw")
-
-@asset(
-    description="Executa DBT após coleta.",
-    non_argument_deps={"crawler_economia", "crawler_governo"},
-    kinds={"dbt"}
-)
-def executar_dbt() -> None:
-    if not os.path.exists(DBT_PROJECT_PATH):
-        raise NotADirectoryError(f"Diretório DBT não existe: {DBT_PROJECT_PATH}")
-    subprocess.run(["dbt", "run"], check=True, cwd=DBT_PROJECT_PATH)
-    print("Modelos DBT executados com sucesso.")
-
-@asset(
-    description="Trata dados de economia.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}
-)
-def tratar_dados_economia() -> pd.DataFrame:
-    return tratar_dados_func("economia_transformed", "economia_processed", RESULTADOS_DIR, "economia_processed")
-
-@asset(
-    description="Trata dados de governo.",
-    non_argument_deps={"executar_dbt"},
-    kinds={"duckdb", "pandas", "mongodb"}
-)
-def tratar_dados_governo() -> pd.DataFrame:
-    return tratar_dados_func("governo_transformed", "governo_processed", RESULTADOS_DIR, "governo_processed")
-
-@asset(
-    description="Treina IA economia.",
-    non_argument_deps={"tratar_dados_economia"},
-    kinds={"python", "scikitlearn"}
-)
-def treinar_ia_economia() -> None:
-    df = carregar_dados_duckdb("economia_processed")
-    treinar_ia(df, "economia", RESULTADOS_DIR)
-
-@asset(
-    description="Treina IA governo.",
-    non_argument_deps={"tratar_dados_governo"},
-    kinds={"python", "scikitlearn"}
-)
-def treinar_ia_governo() -> None:
-    df = carregar_dados_duckdb("governo_processed")
-    treinar_ia(df, "governo", RESULTADOS_DIR)
-
-@asset(
-    description="Verifica dados transformados.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_transformados() -> None:
-    with duckdb_lock:
-        with duckdb.connect(DUCKDB_FILE) as conn:
-            gov_df = conn.execute("SELECT * FROM governo_transformed LIMIT 5").fetchdf()
-            print("Governo transformado (amostra):")
-            print(gov_df)
-            eco_df = conn.execute("SELECT * FROM economia_transformed LIMIT 5").fetchdf()
-            print("Economia transformado (amostra):")
-            print(eco_df)
-
-@asset(
-    description="Verifica disponibilidade dados IA.",
-    non_argument_deps={"tratar_dados_economia", "tratar_dados_governo"},
-    kinds={"python"}
-)
-def verificar_dados_disponiveis() -> None:
-    eco_df = carregar_dados_duckdb("economia_processed")
-    gov_df = carregar_dados_duckdb("governo_processed")
-    print(f"Economia: {eco_df.shape[0]} registros disponíveis.")
-    print(f"Governo: {gov_df.shape[0]} registros disponíveis.")
-
-
