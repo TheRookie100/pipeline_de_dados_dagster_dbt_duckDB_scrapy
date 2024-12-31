@@ -1,4 +1,4 @@
 Algoritmo,Acurácia,Precisão,Recall,F1-Score
 RandomForest,1.0,1.0,1.0,1.0
-LogisticRegression,0.8888888888888888,0.0,0.0,0.0
+LogisticRegression,0.8,0.0,0.0,0.0
 SVM,1.0,1.0,1.0,1.0

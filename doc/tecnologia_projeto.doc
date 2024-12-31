@@ -193,9 +193,11 @@ Compatibilidade com SQL: Suporta a maioria das funcionalidades do SQL padrão.
 MongoDB é um banco de dados NoSQL orientado a documentos que armazena dados em formato JSON-like (BSON), permitindo flexibilidade e escalabilidade.
 
 Principais Funcionalidades:
+
 Modelo de Documento: Armazena dados em documentos flexíveis, facilitando a representação de dados hierárquicos.
 Escalabilidade Horizontal: Suporta distribuição de dados em múltiplos servidores.
 Consultas Poderosas: Oferece uma linguagem de consulta rica e índices flexíveis.
+
 1.5. Scrapy
 Scrapy é um framework de crawling e scraping para Python, utilizado para extrair dados de websites de forma estruturada.
 
@@ -207,11 +209,13 @@ Extensibilidade: Suporta middleware e extensões para funcionalidades adicionais
 Vamos analisar como cada uma dessas tecnologias se encaixa no seu projeto, considerando um fluxo de trabalho típico de ETL para coleta, transformação e análise de dados.
 
 2.1. Fluxo Geral do Pipeline
+
 Extração (Crawling): Utiliza-se Scrapy para coletar dados de websites.
 Armazenamento Bruto: Os dados extraídos são salvos no DuckDB para armazenamento inicial e também no MongoDB para acesso flexível.
 Transformação: Utiliza-se DBT para transformar os dados brutos armazenados no DuckDB em modelos analíticos.
 Orquestração: Dagster gerencia todo o pipeline, coordenando a execução dos diferentes componentes e assegurando que cada etapa seja executada na ordem correta.
 Análise e Ciência de Dados: Após a transformação, os dados podem ser utilizados para treinamento de modelos de machine learning ou análises mais aprofundadas.
+
 2.2. Detalhamento das Etapas
 2.2.1. Extração de Dados com Scrapy
 Função: Coletar dados de fontes externas (sites de economia e governo) através de spiders personalizados.
@@ -219,6 +223,7 @@ Como Funciona:
 Spiders: Classes que definem como navegar e extrair dados de sites específicos.
 Crawlers: Executam os spiders para coletar dados.
 Output: Dados extraídos são salvos em arquivos JSON e inseridos no DuckDB e no MongoDB.
+
 2.2.2. Armazenamento de Dados Brutos no DuckDB e MongoDB
 DuckDB:
 Uso: Armazena os dados extraídos de forma estruturada para facilitar transformações e consultas analíticas.
@@ -226,6 +231,7 @@ Vantagem: Alta performance para consultas analíticas sem a necessidade de um se
 MongoDB:
 Uso: Armazena os dados extraídos de forma flexível, permitindo consultas rápidas e armazenamento de dados semi-estruturados.
 Vantagem: Flexibilidade no esquema, facilitando inserções de dados variados e acesso rápido através de consultas.
+
 2.2.3. Transformação de Dados com DBT
 Função: Transformar os dados brutos armazenados no DuckDB em modelos analíticos prontos para análise e treinamento de modelos de machine learning.
 Como Funciona:
@@ -233,6 +239,7 @@ Modelos DBT: Scripts SQL que definem transformações, como limpeza de dados, ag
 Execução: Os modelos são executados para transformar os dados no DuckDB.
 Integração com Dagster:
 Asset DBT: O asset executar_dbt no Dagster orquestra a execução dos modelos DBT, garantindo que a transformação ocorra após a extração dos dados.
+
 2.2.4. Orquestração com Dagster
 Função: Gerenciar e coordenar a execução das diferentes etapas do pipeline (crawling, transformação, treinamento de IA).
 Como Funciona:
@@ -269,23 +276,30 @@ Dagster coordena todas as etapas, garantindo que a extração, transformação e
 Ele também gerencia os recursos, como a conexão com o MongoDB, assegurando que cada asset tenha acesso aos recursos necessários.
 4. Papel de Cada Tecnologia no Contexto do Projeto
 4.1. Scrapy (Crawling)
+
 Função: Extração de dados de fontes externas (sites de economia e governo).
 Responsabilidade: Coletar notícias e informações relevantes, transformando-as em formatos estruturados para armazenamento.
+
 4.2. DuckDB (Data Warehouse e Armazenamento Analítico)
 Função: Armazenamento estruturado dos dados extraídos e transformados.
 Responsabilidade: Servir como um data warehouse embutido para consultas analíticas rápidas e armazenamento intermediário para transformações.
+
 4.3. DBT (Transformação de Dados)
 Função: Transformação dos dados brutos em modelos analíticos.
 Responsabilidade: Limpar, organizar e estruturar os dados no DuckDB para facilitar análises posteriores e treinamento de modelos de IA.
+
 4.4. MongoDB (Armazenamento Flexível e Acesso Rápido)
 Função: Armazenamento flexível de dados brutos e processados.
 Responsabilidade: Facilitar o acesso rápido e flexível aos dados para análises ad-hoc, visualizações e integração com outras aplicações.
+
 4.5. Dagster (Orquestração e Gerenciamento de Pipelines)
 Função: Coordenar a execução das diferentes etapas do pipeline.
 Responsabilidade: Garantir que cada etapa (crawling, transformação, análise) seja executada na ordem correta, monitorar o progresso e lidar com falhas.
+
 4.6. Ciência de Dados e Machine Learning
 Função: Análise de sentimento e treinamento de modelos de classificação.
 Responsabilidade: Transformar os dados transformados em insights acionáveis e modelos preditivos que podem ser utilizados para tomar decisões informadas.
+
 5. Processo ETL no Seu Projeto
 Vamos detalhar como o processo ETL (Extração, Transformação e Carga) é implementado no seu projeto usando as tecnologias mencionadas.
 
