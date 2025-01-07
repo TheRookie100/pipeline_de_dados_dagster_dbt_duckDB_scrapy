@@ -1,33 +1,35 @@
-import os  # Biblioteca padrão para manipulação de arquivos e diretórios
-import json  # Biblioteca padrão para manipulação de dados JSON
-import pandas as pd  # Biblioteca para manipulação e análise de dados
-from datetime import datetime  # Biblioteca padrão para manipulação de datas e horas
-from dagster import asset  # Biblioteca Dagster para definição de assets
-from scrapy.crawler import CrawlerProcess  # Biblioteca Scrapy para execução de crawlers
-from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider  # Spider específico para coleta de notícias de economia
-from crawler_noticia.governo.governo.spiders.noticia import G1Spider  # Spider específico para coleta de notícias de governo
-import duckdb  # Biblioteca para manipulação do banco de dados DuckDB
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer  # Biblioteca para análise de sentimento com VADER
-from sklearn.model_selection import train_test_split  # Função para dividir os dados em treino e teste
-from sklearn.ensemble import RandomForestClassifier  # Algoritmo de classificação Random Forest
-from sklearn.linear_model import LogisticRegression  # Algoritmo de classificação Regressão Logística
-from sklearn.svm import SVC  # Algoritmo de classificação SVM (Support Vector Machine)
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix  # Métricas de avaliação de modelos
-from filelock import FileLock  # Biblioteca para criação de locks de arquivos, evitando concorrência
-import hashlib  # Biblioteca padrão para geração de hashes
-import subprocess  # Biblioteca padrão para execução de comandos do sistema
-from db_mongo.conexao_mongo import salvar_no_mongo # Importar funções de MongoDB
+# --------------------------------- BIBLIOTECAS ---------------------------------
 
-# ---------------------------- CONFIG ----------------------------
+import os  
+import json  
+import pandas as pd  
+from datetime import datetime  
+from dagster import asset 
+from scrapy.crawler import CrawlerProcess  
+from crawler_noticia.economia.economia.spiders.noticia import NoticiasSpider 
+from crawler_noticia.governo.governo.spiders.noticia import G1Spider 
+import duckdb  
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer  
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier  
+from sklearn.linear_model import LogisticRegression  
+from sklearn.svm import SVC 
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix  
+from filelock import FileLock 
+import hashlib  
+import subprocess  
+from db_mongo.conexao_mongo import salvar_no_mongo 
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Define o diretório base do projeto, subindo dois níveis a partir do diretório atual do arquivo
-RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados") # Define o diretório onde os resultados serão armazenados
-os.makedirs(RESULTADOS_DIR, exist_ok=True) # Cria o diretório de resultados, caso ele não exista
-DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb") # Define o caminho do arquivo do banco de dados DuckDB
-DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project") # Define o caminho do projeto DBT
-duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock")) # Cria um lock de arquivo para evitar concorrência no acesso ao DuckDB
+# ---------------------------- CONFIG DE DIRETÓRIOS E ARQUIVOS ----------------------------
 
-# ---------------------------- FUNÇÕES AUXILIARES ----------------------------
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+RESULTADOS_DIR = os.path.join(BASE_DIR, "projeto_dados", "resultados") 
+os.makedirs(RESULTADOS_DIR, exist_ok=True) 
+DUCKDB_FILE = os.path.join(BASE_DIR, "noticias.duckdb") 
+DBT_PROJECT_PATH = os.path.join(BASE_DIR, "dbt_project") 
+duckdb_lock = FileLock(os.path.join(BASE_DIR, "duckdb.lock")) 
+
+# ---------------------------- FUNÇÕES AUXILIARES PARA COLETA E TRATAMENTO DE DADOS ----------------------------
 
 def run_spider(spider, raw_table_name, collection_name):
     """
@@ -65,23 +67,23 @@ def run_spider(spider, raw_table_name, collection_name):
     
     # Processa os dados de acordo com o nome da tabela
     if raw_table_name == "economia_raw":
-        for item in data: # Itera sobre os itens da lista
-            for time_key, titles in item.items(): # Itera sobre as chaves e valores do dicionário
-                for title in titles: # Itera sobre os títulos das notícias 
-                    processed_data.append({ # Adiciona um dicionário com os dados processados
-                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(), # Gera um hash MD5 para o ID
-                        "titulo_noticia": title, # Título da notícia
-                        "texto": "", # Texto da notícia (vazio)
-                        "data_publicacao": None, # Data de publicação (nula)
-                        "time_ago": time_key, # Tempo decorrido desde a publicação
+        for item in data: 
+            for time_key, titles in item.items(): 
+                for title in titles: 
+                    processed_data.append({ 
+                        "id": hashlib.md5(f"{title}{time_key}".encode()).hexdigest(), 
+                        "titulo_noticia": title,
+                        "texto": "", 
+                        "data_publicacao": None,
+                        "time_ago": time_key, 
                     })
-    elif raw_table_name == "governo_raw": # Se a tabela for "governo_raw"
-        for item in data: # Itera sobre os itens da lista
-            processed_data.append({ # Adiciona um dicionário com os dados processados
-                "id": hashlib.md5(str(item).encode()).hexdigest(), # Gera um hash MD5 para o ID
-                "titulo_noticia": item.get("title", ""), # Título da notícia
-                "texto": item.get("body", ""), # Texto da notícia
-                "data_publicacao": item.get("data_publicacao", ""), # Data de publicação
+    elif raw_table_name == "governo_raw":
+        for item in data: 
+            processed_data.append({ 
+                "id": hashlib.md5(str(item).encode()).hexdigest(), 
+                "titulo_noticia": item.get("title", ""),
+                "texto": item.get("body", ""), 
+                "data_publicacao": item.get("data_publicacao", ""),
             })
 
     # Converte os dados processados em um DataFrame do pandas
@@ -89,24 +91,24 @@ def run_spider(spider, raw_table_name, collection_name):
 
     # Garante que exista a coluna 'id'
     if 'id' not in df.columns: # Se a coluna 'id' não existir
-        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1) # Gera um hash MD5 para o ID
+        df['id'] = df.apply(lambda row: hashlib.md5(str(row).encode()).hexdigest(), axis=1) 
     
     # Garante que exista a coluna 'data_publicacao'
-    if 'data_publicacao' not in df.columns: # Se a coluna 'data_publicacao' não existir
-        df['data_publicacao'] = pd.NaT # Define a coluna 'data_publicacao' como nula
+    if 'data_publicacao' not in df.columns: 
+        df['data_publicacao'] = pd.NaT 
 
     # Uso de FileLock para evitar concorrência no mesmo processo
-    with duckdb_lock: # Bloqueia o arquivo do DuckDB
+    with duckdb_lock: 
         # Uso do context manager para fechar conexão adequadamente
-        with duckdb.connect(DUCKDB_FILE) as conn: # Conecta ao DuckDB
+        with duckdb.connect(DUCKDB_FILE) as conn:
             # Registra o DataFrame como uma view temporária no DuckDB
-            conn.register("df_view", df) # Registra o DataFrame como uma view temporária
-            try: # Tenta contar o número de registros na tabela existente
+            conn.register("df_view", df) 
+            try: 
                 # Tenta contar o número de registros na tabela existente
-                count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0] # Conta o número de registros
+                count = conn.execute(f"SELECT COUNT(*) FROM {raw_table_name}").fetchone()[0]
             except (duckdb.BinderException, duckdb.CatalogException): # Se a tabela não existir
                 # Se a tabela não existir, define o count como 0
-                count = 0 # Define o count como 0
+                count = 0
 
             if count > 0: # Se houver registros na tabela
                 # Insere novos dados na tabela existente, evitando duplicatas
@@ -115,11 +117,11 @@ def run_spider(spider, raw_table_name, collection_name):
                     SELECT * FROM df_view 
                     WHERE id NOT IN (SELECT id FROM {raw_table_name})
                 """) # Insere novos dados na tabela existente
-                print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.") # Mensagem de confirmação
-            else: # Se não houver registros na tabela
-                # Cria uma nova tabela e insere os dados
-                conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view") # Cria uma nova tabela
-                print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.") # Mensagem de confirmação
+                print(f"Novos dados apendados na tabela '{raw_table_name}' no DuckDB.")
+            else: 
+                
+                conn.execute(f"CREATE TABLE {raw_table_name} AS SELECT * FROM df_view") 
+                print(f"Tabela '{raw_table_name}' criada e dados inseridos no DuckDB.") 
  
     # Mensagem de confirmação de salvamento no DuckDB
     print(f"Dados salvos na tabela '{raw_table_name}' no DuckDB.")

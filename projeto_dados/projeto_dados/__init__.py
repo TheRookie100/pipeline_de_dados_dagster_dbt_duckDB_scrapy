@@ -179,7 +179,7 @@ defs = Definitions(
     schedules=[dagster_schedule],
 )
 '''
-
+'''
 
 # Definições do Dagster
 from dagster import (
@@ -220,7 +220,7 @@ dagster_schedule = ScheduleDefinition(
 defs = Definitions(
     assets=all_assets,
     schedules=[dagster_schedule],
-)
+)'''
 
 
 

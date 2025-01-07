@@ -3,15 +3,15 @@ Relatório de Treinamento de IA para economia
 
 Distribuição de Sentimentos:
 Sentimento  Contagem
-    neutro        65
-  negativo        20
-  positivo        15
+    neutro       181
+  negativo        51
+  positivo        16
 
 Métricas dos Modelos:
-         Algoritmo  Acurácia  Precisão   Recall  F1-Score
-      RandomForest       1.0       1.0 1.000000       1.0
-LogisticRegression       0.9       1.0 0.333333       0.5
-               SVM       1.0       1.0 1.000000       1.0
+         Algoritmo  Acurácia  Precisão  Recall  F1-Score
+      RandomForest      1.00       1.0     1.0       1.0
+LogisticRegression      0.94       0.0     0.0       0.0
+               SVM      1.00       1.0     1.0       1.0
 
 Observações:
 IA analisando sentimento com VADER.
