@@ -17,4 +17,3 @@ SELECT
     -- Adicione transformações adicionais aqui, se necessário
 FROM source
 
-
